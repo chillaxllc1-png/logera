@@ -1,65 +1,53 @@
-import Image from "next/image";
-
-export default function Home() {
+export default function Page() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+    <section>
+      <h1>注文・返金対応の情報を整理する業務支援SaaS</h1>
+
+      <p><strong>Logera（ロゲラ）</strong> は、法人向けの業務支援SaaSです。</p>
+
+      <p>
+        本サービスは、EC事業者が日常的に行う注文確認や返金対応において、
+        過去の履歴や関連情報を整理・可視化し、
+        担当者が判断するための参考情報を提供します。
+      </p>
+
+      <p>
+        本サービスは、不正の有無や特定の意図を判定・断定するものではありません。
+        表示内容は観測された履歴や比較情報に基づく参考情報です。
+      </p>
+
+      <p>
+        ご契約中は、管理画面からいつでも解約手続きを行うことができます
+        （解約後の扱いは「解約方法」ページをご参照ください）。
+      </p>
+
+      <h2>できること</h2>
+      <ul>
+        <li>注文・返金履歴の整理</li>
+        <li>顧客単位の履歴の可視化</li>
+        <li>「通常と異なる傾向（参考）」の要因表示（根拠付き）</li>
+      </ul>
+
+      <h2>できないこと</h2>
+      <ul>
+        <li>不正の判定・断定</li>
+        <li>出荷停止や返金可否の自動判断</li>
+      </ul>
+
+      {/* 追加ブロック：現場ユースケース（説明補足） */}
+      <h2>このような業務で利用されています</h2>
+      <ul>
+        <li>
+          返金依頼が増えた月に、過去の対応履歴をまとめて確認したい場合
+        </li>
+        <li>
+          同一顧客の注文・返金履歴を、時系列で一覧したい場合
+        </li>
+        <li>
+          直近の対応状況が、過去と比べてどのような傾向にあるかを
+          確認したい場合
+        </li>
+      </ul>
+    </section>
+  )
 }
