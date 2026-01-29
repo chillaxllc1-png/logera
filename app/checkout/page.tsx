@@ -4,10 +4,6 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/useAuth'
 
-export const metadata = {
-    title: 'お支払い｜Logera',
-}
-
 export default function Checkout() {
     const router = useRouter()
     const { activateSubscription } = useAuth()

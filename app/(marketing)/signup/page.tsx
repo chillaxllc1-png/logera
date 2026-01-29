@@ -3,12 +3,6 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
-export const metadata = {
-    title: '新規登録｜Logera',
-    description:
-        '法人向け業務支援SaaS「Logera」の新規登録ページです。会社情報を登録後、料金プランの確認とお支払い手続きへ進みます。',
-}
-
 export default function Signup() {
     const router = useRouter()
 
