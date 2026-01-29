@@ -7,11 +7,11 @@ export default function Dashboard() {
     const [showWelcome, setShowWelcome] = useState(false)
 
     useEffect(() => {
-        const alreadyShown = localStorage.getItem('logera:welcomeShown')
+        const alreadyShown = localStorage.getItem('datlynq:welcomeShown')
 
         if (!alreadyShown) {
             setShowWelcome(true)
-            localStorage.setItem('logera:welcomeShown', 'true')
+            localStorage.setItem('datlynq:welcomeShown', 'true')
         }
     }, [])
 
@@ -67,12 +67,12 @@ export default function Dashboard() {
                         <path d="M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2Z" />
                     </svg>
 
-                    ご契約ありがとうございます。Logera の全機能をご利用いただけます。
+                    ご契約ありがとうございます。DatLynq の全機能をご利用いただけます。
                 </p>
             )}
 
             <p style={{ margin: '0 0 32px', color: '#374151' }}>
-                Logera の管理画面です。ここからデータの確認や、
+                DatLynq の管理画面です。ここからデータの確認や、
                 契約内容の管理を行います。
             </p>
 

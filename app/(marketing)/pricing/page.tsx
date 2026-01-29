@@ -18,7 +18,7 @@ export default function Pricing() {
             <div style={{ marginBottom: 32 }}>
                 <h1 style={{ margin: '0 0 10px', fontSize: 32 }}>料金プラン</h1>
                 <p style={{ margin: 0, color: '#374151' }}>
-                    Logera は月額課金制の法人向け業務支援SaaSです。
+                    DatLynq は月額課金制の法人向け業務支援SaaSです。
                     アカウント登録後、管理画面にてプランを選択し、
                     決済手続きが完了した時点から利用が開始されます。
                 </p>

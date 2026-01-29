@@ -48,7 +48,7 @@ export default function Header() {
                         letterSpacing: 0.2,
                     }}
                 >
-                    Logera
+                    DatLynq
                 </Link>
 
                 {/* ナビゲーション */}

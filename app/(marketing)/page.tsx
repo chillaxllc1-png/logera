@@ -36,7 +36,7 @@ export default function Page() {
         </p>
 
         <h1 style={{ margin: '10px 0 8px', fontSize: 34, lineHeight: 1.2 }}>
-          Logera（ロゲラ）
+          DatLynq（データリンク）
         </h1>
 
         <p style={{ margin: '0 0 18px', fontSize: 18, color: '#111827' }}>

@@ -65,7 +65,7 @@ export default function Billing() {
                 <h2 style={cardTitle}>お支払い手続き</h2>
 
                 <p style={{ margin: '0 0 12px', color: '#374151' }}>
-                    Logera を利用するには、料金プランの確定と
+                    DatLynq を利用するには、料金プランの確定と
                     お支払い手続きが必要です。
                     <br />
                     お支払い完了後、すぐに管理画面をご利用いただけます。

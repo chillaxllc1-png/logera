@@ -40,7 +40,7 @@ export default function Footer() {
 
                 {/* 補足・信頼 */}
                 <p style={{ margin: 0, fontSize: 13, color: '#6b7280' }}>
-                    Logera は法人・事業者向けの業務支援SaaSです。
+                    DatLynq は法人・事業者向けの業務支援SaaSです。
                 </p>
 
                 {/* コピーライト */}

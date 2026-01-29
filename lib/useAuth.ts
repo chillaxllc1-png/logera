@@ -9,7 +9,7 @@ type User = {
 
 export type SubscriptionPlan = 'Starter' | 'Growth' | 'Pro' | null
 
-const STORAGE_KEY = 'logera-auth'
+const STORAGE_KEY = 'datlynq-auth'
 
 type StoredAuthState = {
     isLoggedIn: boolean

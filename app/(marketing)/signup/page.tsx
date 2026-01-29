@@ -27,7 +27,7 @@ export default function Signup() {
             </h1>
 
             <p style={{ margin: '0 0 28px', color: '#374151', lineHeight: 1.6 }}>
-                会社情報と担当者情報を入力し、Logera のアカウントを作成します。
+                会社情報と担当者情報を入力し、DatLynq のアカウントを作成します。
                 <br />
                 登録後、料金プランの確認とお支払い手続きに進みます。
             </p>
