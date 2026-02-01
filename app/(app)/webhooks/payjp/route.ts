@@ -9,12 +9,6 @@ const supabaseAdmin = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-/**
- * ⚠️ pay.jp 審査前用・ダミーWebhook
- * - 署名検証なし
- * - ローカル / staging 用
- * - insert / update 両対応（壊れない）
- */
 export async function POST(req: NextRequest) {
     const body = await req.json()
     const supabase = supabaseAdmin
@@ -55,9 +49,6 @@ export async function POST(req: NextRequest) {
         }
 
         switch (eventType) {
-            /**
-             * subscription 作成 or 更新
-             */
             case 'subscription.created':
             case 'subscription.updated': {
                 const payload = {
@@ -73,10 +64,14 @@ export async function POST(req: NextRequest) {
                 }
 
                 if (existingSub) {
-                    await supabase
+                    const { data: updated, error } = await supabase
                         .from('subscriptions')
                         .update(payload)
                         .eq('id', existingSub.id)
+                        .select('id, status')
+
+                    if (error) throw error
+                    console.log('subscription.updated rows:', updated)
                 } else {
                     await supabase.from('subscriptions').insert({
                         user_id: data.metadata?.user_id ?? null,
@@ -84,13 +79,9 @@ export async function POST(req: NextRequest) {
                         ...payload,
                     })
                 }
-
                 break
             }
 
-            /**
-             * subscription 解約
-             */
             case 'subscription.deleted': {
                 if (existingSub) {
                     await supabase
@@ -104,20 +95,24 @@ export async function POST(req: NextRequest) {
                 break
             }
 
-            /**
-             * 支払い失敗
-             */
             case 'charge.failed': {
                 if (externalSubscriptionId) {
-                    await supabase
+                    const { data: updated, error } = await supabase
                         .from('subscriptions')
-                        .update({
-                            status: 'past_due',
-                        })
-                        .eq(
-                            'external_subscription_id',
+                        .update({ status: 'past_due' })
+                        .eq('external_subscription_id', externalSubscriptionId)
+                        .select('id, status')
+
+                    if (error) throw error
+
+                    console.log('charge.failed rows:', updated)
+
+                    if (!updated || updated.length === 0) {
+                        console.error(
+                            '❌ charge.failed matched 0 rows:',
                             externalSubscriptionId
                         )
+                    }
                 }
                 break
             }
