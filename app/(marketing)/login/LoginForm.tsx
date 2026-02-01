@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase/client'
+import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 
 export default function LoginForm() {
     const router = useRouter()
@@ -15,19 +15,17 @@ export default function LoginForm() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-
         if (loading) return // 二重送信防止
 
         setError(null)
         setLoading(true)
 
+        const supabase = getSupabaseBrowserClient()
+
         const { error } = await supabase.auth.signInWithPassword({
             email,
             password,
         })
-
-        // ❌ 成功時は loading を戻さない
-        // → 画面遷移でコンポーネントが破棄される
 
         if (error) {
             setLoading(false)

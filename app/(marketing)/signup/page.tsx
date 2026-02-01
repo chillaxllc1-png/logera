@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase/client'
+import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 
 export default function Signup() {
     const router = useRouter()
@@ -22,7 +22,9 @@ export default function Signup() {
         setLoading(true)
         setError(null)
 
-        const { data, error } = await supabase.auth.signUp({
+        const supabase = getSupabaseBrowserClient()
+
+        const { error } = await supabase.auth.signUp({
             email,
             password,
             options: {
@@ -41,7 +43,7 @@ export default function Signup() {
         }
 
         /**
-         * ✅ この時点で session が作られている
+         * ✅ この時点で session は作られている
          * → login 不要
          */
         router.replace('/billing')

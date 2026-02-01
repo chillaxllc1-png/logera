@@ -27,32 +27,24 @@ function LockIcon() {
 
 export default function RequireSubscription({
     children,
+    featureKey,
 }: {
     children: ReactNode
+    featureKey: string
 }) {
-    const { hasActiveSubscription, isLoading } = useAuth()
+    const { hasActiveSubscription, isLoading, canUseFeature } = useAuth()
 
     // 認証・DB同期中は描画しない（チラ見防止）
     if (isLoading || hasActiveSubscription === null) {
         return null
     }
 
-    // 課金済み → 通常表示（★ transition が効く）
-    if (hasActiveSubscription === true) {
-        return (
-            <div
-                style={{
-                    transition: 'opacity 220ms ease, filter 220ms ease',
-                    opacity: 1,
-                    filter: 'none',
-                }}
-            >
-                {children}
-            </div>
-        )
+    // ✅ 機能が使える → そのまま表示
+    if (canUseFeature(featureKey)) {
+        return <>{children}</>
     }
 
-    // 未課金 → ロック付き表示
+    // ❌ 機能が使えない → ロック表示
     return (
         <div
             style={{
@@ -70,7 +62,6 @@ export default function RequireSubscription({
                     pointerEvents: 'none',
                     filter: 'blur(1.2px)',
                     opacity: 0.55,
-                    transition: 'opacity 220ms ease, filter 220ms ease',
                 }}
             >
                 {children}
@@ -89,7 +80,6 @@ export default function RequireSubscription({
                     borderRadius: 16,
                     padding: 20,
                     textAlign: 'center',
-                    transition: 'opacity 180ms ease',
                 }}
             >
                 <div>

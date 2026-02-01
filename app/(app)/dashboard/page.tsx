@@ -213,7 +213,7 @@ export default function Dashboard() {
                 }}
             >
                 {/* 有料機能① */}
-                <RequireSubscription>
+                <RequireSubscription featureKey="order_refund_history">
                     <div style={card}>
                         <h2 style={cardTitle}>注文・返金履歴</h2>
                         <p style={cardBody}>
@@ -225,7 +225,7 @@ export default function Dashboard() {
                 </RequireSubscription>
 
                 {/* 有料機能② */}
-                <RequireSubscription>
+                <RequireSubscription featureKey="trend_analysis">
                     <div style={card}>
                         <h2 style={cardTitle}>傾向の確認</h2>
                         <p style={cardBody}>

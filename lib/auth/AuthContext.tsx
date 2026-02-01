@@ -7,10 +7,10 @@ import React, {
     useMemo,
     useState,
 } from 'react'
-import { supabase } from '@/lib/supabase/client'
-import { fetchSubscriptionByUserId } from '@/lib/supabase/subscriptions'
+import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import { fetchActiveSubscriptionSnapshotByUserId } from '@/lib/supabase/subscriptions'
 
-export type SubscriptionPlan = 'Starter' | 'Growth' | 'Pro' | null
+export type SubscriptionPlan = 'starter' | 'pro' | null
 
 export type User = {
     id: string
@@ -25,7 +25,11 @@ type AuthContextType = {
     hasActiveSubscription: boolean | null
     subscriptionPlan: SubscriptionPlan
 
-    // ✅ これは「session確定中」だけに使う
+    // ✅ 機能キー（plan_features）
+    featureKeys: string[]
+    canUseFeature: (featureKey: string) => boolean
+
+    // session確定中のみ true
     isLoading: boolean
 
     refreshSubscription: () => Promise<void>
@@ -45,6 +49,9 @@ function withTimeout<T>(p: Promise<T>, ms = 6000): Promise<T> {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+    // ✅ client component 内で生成（トップレベル生成しない）
+    const supabase = useMemo(() => getSupabaseBrowserClient(), [])
+
     const [user, setUser] = useState<User | null>(null)
     const [isLoggedIn, setIsLoggedIn] = useState(false)
 
@@ -54,25 +61,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [subscriptionPlan, setSubscriptionPlan] =
         useState<SubscriptionPlan>(null)
 
-    // ✅ ここは「session確定」だけ
+    const [featureKeys, setFeatureKeys] = useState<string[]>([])
+
+    // session確定用
     const [isLoading, setIsLoading] = useState(true)
 
     const syncSubscriptionFromDB = async (uid: string) => {
         try {
-            const sub = await withTimeout(fetchSubscriptionByUserId(uid), 6000)
+            const snap = await withTimeout(
+                fetchActiveSubscriptionSnapshotByUserId(uid),
+                6000
+            )
 
-            if (sub && sub.status === 'active') {
+            if (snap.isActive) {
                 setHasActiveSubscription(true)
-                setSubscriptionPlan((sub.plan ?? 'Starter') as SubscriptionPlan)
+                setSubscriptionPlan(snap.planKey)
+                setFeatureKeys(snap.featureKeys ?? [])
             } else {
                 setHasActiveSubscription(false)
                 setSubscriptionPlan(null)
+                setFeatureKeys([])
             }
         } catch (e) {
-            // ✅ DBが落ちてても固めない（未同期扱い→UIで抑制）
             console.warn('syncSubscriptionFromDB failed:', e)
             setHasActiveSubscription(null)
             setSubscriptionPlan(null)
+            setFeatureKeys([])
         }
     }
 
@@ -87,12 +101,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const applySession = (session: any) => {
             if (!alive) return
 
-            // ✅ ここで「ログインしてるか」をまず確定させる（DB待ちしない）
             if (!session?.user) {
                 setUser(null)
                 setIsLoggedIn(false)
                 setHasActiveSubscription(null)
                 setSubscriptionPlan(null)
+                setFeatureKeys([])
                 setIsLoading(false)
                 return
             }
@@ -105,10 +119,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(u)
             setIsLoggedIn(true)
 
-            // ✅ sessionは確定したので loading終了（ここが肝）
+            // session は確定
             setIsLoading(false)
 
-            // ✅ DB同期はバックグラウンドで（awaitしない）
+            // DB同期は裏で
             syncSubscriptionFromDB(u.id)
         }
 
@@ -123,6 +137,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setIsLoggedIn(false)
                     setHasActiveSubscription(null)
                     setSubscriptionPlan(null)
+                    setFeatureKeys([])
                     setIsLoading(false)
                 }
             }
@@ -138,7 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             alive = false
             data.subscription.unsubscribe()
         }
-    }, [])
+    }, [supabase])
 
     const logout = async () => {
         try {
@@ -148,8 +163,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsLoggedIn(false)
             setHasActiveSubscription(null)
             setSubscriptionPlan(null)
+            setFeatureKeys([])
             setIsLoading(false)
         }
+    }
+
+    const featureSet = useMemo(() => new Set(featureKeys), [featureKeys])
+
+    const canUseFeature = (featureKey: string) => {
+        // DB未同期の間は false（チラ見防止）
+        if (hasActiveSubscription !== true) return false
+        return featureSet.has(featureKey)
     }
 
     const value = useMemo<AuthContextType>(
@@ -158,11 +182,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             isLoggedIn,
             hasActiveSubscription,
             subscriptionPlan,
+            featureKeys,
+            canUseFeature,
             isLoading,
             refreshSubscription,
             logout,
         }),
-        [user, isLoggedIn, hasActiveSubscription, subscriptionPlan, isLoading]
+        [
+            user,
+            isLoggedIn,
+            hasActiveSubscription,
+            subscriptionPlan,
+            featureKeys,
+            canUseFeature,
+            isLoading,
+        ]
     )
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
@@ -170,6 +204,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
     const ctx = useContext(AuthContext)
-    if (!ctx) throw new Error('useAuth must be used inside AuthProvider')
+    if (!ctx) {
+        throw new Error('useAuth must be used inside AuthProvider')
+    }
     return ctx
 }
