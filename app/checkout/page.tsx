@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createSubscription } from '@/lib/supabase/subscriptions'
 import { useAuth } from '@/lib/auth/AuthContext'
+import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 
 export default function Checkout() {
     const router = useRouter()
@@ -13,9 +14,6 @@ export default function Checkout() {
     const [isSaving, setIsSaving] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
-    // =========================
-    // 支払い成功
-    // =========================
     const handlePayment = async () => {
         setError(null)
 
@@ -27,16 +25,28 @@ export default function Checkout() {
         try {
             setIsSaving(true)
 
+            const supabase = getSupabaseBrowserClient()
+
+            // ✅ Starter プランの planId を取得
+            const { data: plan, error: planError } = await supabase
+                .from('plans')
+                .select('id')
+                .eq('key', 'starter')
+                .single()
+
+            if (planError || !plan) {
+                throw new Error('プラン情報を取得できませんでした')
+            }
+
+            // ✅ UUID を渡す（ここが修正点）
             await createSubscription({
                 userId: user.id,
-                plan: 'Starter',
+                planId: plan.id,
             })
 
             await refreshSubscription()
 
             setIsCompleted(true)
-
-            // ✅ 成功フラグ（dashboard 用）
             sessionStorage.setItem('datlynq:fromCheckout', 'true')
 
             setTimeout(() => {
@@ -44,12 +54,8 @@ export default function Checkout() {
             }, 1500)
         } catch (e) {
             console.error(e)
-
-            // ✅ 失敗フラグ（必要なら billing でも使える）
-            sessionStorage.setItem('datlynq:checkoutError', 'true')
-
             setError(
-                'お支払いを完了できませんでした。通信状況やカード情報をご確認のうえ、もう一度お試しください。'
+                'お支払いを完了できませんでした。通信状況をご確認のうえ、もう一度お試しください。'
             )
         } finally {
             setIsSaving(false)
@@ -60,7 +66,6 @@ export default function Checkout() {
     // キャンセル
     // =========================
     const handleCancel = () => {
-        // ✅ キャンセル理由を billing に渡す
         sessionStorage.setItem('datlynq:checkoutCanceled', 'true')
         router.replace('/billing')
     }
@@ -151,7 +156,13 @@ export default function Checkout() {
                             }}
                         >
                             {error}
-                            <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600 }}>
+                            <div
+                                style={{
+                                    marginTop: 6,
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                }}
+                            >
                                 ※ 内容を修正後、もう一度お支払いをお試しください。
                             </div>
                         </div>
