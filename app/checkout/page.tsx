@@ -2,25 +2,67 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/lib/useAuth'
+import { createSubscription } from '@/lib/supabase/subscriptions'
+import { useAuth } from '@/lib/auth/AuthContext'
 
 export default function Checkout() {
     const router = useRouter()
-    const { activateSubscription } = useAuth()
+    const { user, refreshSubscription } = useAuth()
 
     const [isCompleted, setIsCompleted] = useState(false)
+    const [isSaving, setIsSaving] = useState(false)
+    const [error, setError] = useState<string | null>(null)
 
-    const handlePayment = () => {
-        // 仮：pay.jp 決済成功
-        activateSubscription()
+    // =========================
+    // 支払い成功
+    // =========================
+    const handlePayment = async () => {
+        setError(null)
 
-        // 完了演出を表示
-        setIsCompleted(true)
+        if (!user) {
+            setError('ログイン状態を確認できませんでした。再ログインしてください。')
+            return
+        }
 
-        // 1秒後に dashboard へ
-        setTimeout(() => {
-            router.replace('/dashboard')
-        }, 1000)
+        try {
+            setIsSaving(true)
+
+            await createSubscription({
+                userId: user.id,
+                plan: 'Starter',
+            })
+
+            await refreshSubscription()
+
+            setIsCompleted(true)
+
+            // ✅ 成功フラグ（dashboard 用）
+            sessionStorage.setItem('datlynq:fromCheckout', 'true')
+
+            setTimeout(() => {
+                router.replace('/dashboard')
+            }, 1500)
+        } catch (e) {
+            console.error(e)
+
+            // ✅ 失敗フラグ（必要なら billing でも使える）
+            sessionStorage.setItem('datlynq:checkoutError', 'true')
+
+            setError(
+                'お支払いを完了できませんでした。通信状況やカード情報をご確認のうえ、もう一度お試しください。'
+            )
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
+    // =========================
+    // キャンセル
+    // =========================
+    const handleCancel = () => {
+        // ✅ キャンセル理由を billing に渡す
+        sessionStorage.setItem('datlynq:checkoutCanceled', 'true')
+        router.replace('/billing')
     }
 
     return (
@@ -32,7 +74,6 @@ export default function Checkout() {
                 lineHeight: 1.7,
             }}
         >
-            {/* 完了メッセージ */}
             {isCompleted ? (
                 <div
                     style={{
@@ -47,9 +88,17 @@ export default function Checkout() {
                         お支払いが完了しました
                     </h1>
 
+                    <p
+                        style={{
+                            margin: '0 0 12px',
+                            color: '#166534',
+                            fontWeight: 700,
+                        }}
+                    >
+                        Starter プランが有効化されました
+                    </p>
+
                     <p style={{ margin: 0, color: '#166534' }}>
-                        ご利用ありがとうございます。
-                        <br />
                         管理画面へ移動します…
                     </p>
                 </div>
@@ -60,8 +109,7 @@ export default function Checkout() {
                     </h1>
 
                     <p style={{ margin: '0 0 24px', color: '#374151' }}>
-                        以下の内容でお支払いを行います。
-                        決済完了後、すぐに管理画面をご利用いただけます。
+                        以下の内容でお支払いを行います。決済完了後、すぐに管理画面をご利用いただけます。
                     </p>
 
                     <div
@@ -70,7 +118,7 @@ export default function Checkout() {
                             borderRadius: 16,
                             padding: 20,
                             background: '#ffffff',
-                            marginBottom: 24,
+                            marginBottom: 16,
                         }}
                     >
                         <dl style={{ margin: 0 }}>
@@ -89,8 +137,55 @@ export default function Checkout() {
                         </dl>
                     </div>
 
-                    <button onClick={handlePayment} style={payButton}>
-                        クレジットカードで支払う（pay.jp ダミー）
+                    {error && (
+                        <div
+                            style={{
+                                margin: '0 0 16px',
+                                padding: '12px 14px',
+                                borderRadius: 12,
+                                background: '#fef2f2',
+                                border: '1px solid #fecaca',
+                                color: '#991b1b',
+                                fontSize: 14,
+                                fontWeight: 700,
+                            }}
+                        >
+                            {error}
+                            <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600 }}>
+                                ※ 内容を修正後、もう一度お支払いをお試しください。
+                            </div>
+                        </div>
+                    )}
+
+                    <button
+                        onClick={handlePayment}
+                        style={payButton}
+                        disabled={isSaving}
+                    >
+                        {isSaving
+                            ? '処理中…'
+                            : error
+                                ? 'もう一度支払う'
+                                : 'クレジットカードで支払う（pay.jp ダミー）'}
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={handleCancel}
+                        style={{
+                            marginTop: 12,
+                            width: '100%',
+                            padding: '10px 14px',
+                            borderRadius: 10,
+                            border: '1px solid #d1d5db',
+                            background: '#ffffff',
+                            color: '#374151',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                        }}
+                        disabled={isSaving}
+                    >
+                        キャンセルして戻る
                     </button>
 
                     <p style={{ marginTop: 16, fontSize: 13, color: '#6b7280' }}>

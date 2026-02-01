@@ -1,17 +1,50 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase/client'
 
 export default function Signup() {
     const router = useRouter()
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault()
+    const [company, setCompany] = useState('')
+    const [name, setName] = useState('')
+    const [email, setEmail] = useState('')
+    const [password, setPassword] = useState('')
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
 
-        // ※ 将来ここで API / 認証処理を入れる
-        // 今は導線を確定させるのが最優先
-        router.push('/billing')
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (loading) return
+
+        setLoading(true)
+        setError(null)
+
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                data: {
+                    company,
+                    name,
+                },
+            },
+        })
+
+        setLoading(false)
+
+        if (error) {
+            setError(error.message)
+            return
+        }
+
+        /**
+         * ✅ この時点で session が作られている
+         * → login 不要
+         */
+        router.replace('/billing')
     }
 
     return (
@@ -32,32 +65,13 @@ export default function Signup() {
                 登録後、料金プランの確認とお支払い手続きに進みます。
             </p>
 
-            {/* 安心補足 */}
-            <div
-                style={{
-                    marginBottom: 24,
-                    padding: 14,
-                    borderRadius: 12,
-                    background: '#f9fafb',
-                    fontSize: 13,
-                    color: '#374151',
-                    lineHeight: 1.6,
-                }}
-            >
-                <ul style={{ margin: 0, paddingLeft: 18 }}>
-                    <li>本サービスは法人・事業者向けサービスです</li>
-                    <li>登録時点では料金は発生しません</li>
-                    <li>クレジットカード情報の入力は登録後に行います</li>
-                    <li>契約後も管理画面からいつでも解約できます</li>
-                </ul>
-            </div>
-
             <form onSubmit={handleSubmit}>
                 <div style={field}>
                     <label style={label}>会社名</label>
                     <input
                         type="text"
-                        placeholder="例：株式会社サンプル"
+                        value={company}
+                        onChange={(e) => setCompany(e.target.value)}
                         required
                     />
                 </div>
@@ -66,7 +80,8 @@ export default function Signup() {
                     <label style={label}>担当者名</label>
                     <input
                         type="text"
-                        placeholder="例：山田 太郎"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
                         required
                     />
                 </div>
@@ -75,8 +90,10 @@ export default function Signup() {
                     <label style={label}>メールアドレス</label>
                     <input
                         type="email"
-                        placeholder="example@company.co.jp"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                         required
+                        disabled={loading}
                     />
                 </div>
 
@@ -84,40 +101,26 @@ export default function Signup() {
                     <label style={label}>パスワード</label>
                     <input
                         type="password"
-                        placeholder="8文字以上"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
                         minLength={8}
                         required
+                        disabled={loading}
                     />
                 </div>
 
-                <p style={{ fontSize: 14, color: '#374151', marginBottom: 12 }}>
-                    アカウント作成後、管理画面にて料金プランを選択し、
-                    お支払い手続きを行うことで正式に利用が開始されます。
-                    登録時点では料金は発生しません。
-                </p>
+                {error && (
+                    <p style={{ color: '#dc2626', fontSize: 13 }}>
+                        {error}
+                    </p>
+                )}
 
-                <p style={{ fontSize: 13, color: '#6b7280', marginTop: 8, marginBottom: 16 }}>
-                    ※ 支払い手続き完了後、すぐに管理画面をご利用いただけます。
-                </p>
-
-                <button type="submit" style={primaryButton}>
-                    アカウントを作成して支払いへ進む
+                <button type="submit" style={primaryButton} disabled={loading}>
+                    {loading
+                        ? '登録中…'
+                        : 'アカウントを作成して支払いへ進む'}
                 </button>
             </form>
-
-            <p
-                style={{
-                    marginTop: 16,
-                    fontSize: 13,
-                    color: '#6b7280',
-                    lineHeight: 1.6,
-                }}
-            >
-                登録することで、
-                <Link href="/terms"> 利用規約</Link> および
-                <Link href="/privacy"> プライバシーポリシー</Link>
-                に同意したものとみなされます。
-            </p>
 
             <div style={{ marginTop: 28 }}>
                 <p style={{ margin: 0, fontSize: 14 }}>

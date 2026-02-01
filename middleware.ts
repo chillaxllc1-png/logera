@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-export async function middleware(req: NextRequest) {
-    const res = NextResponse.next()
+export async function middleware(request: NextRequest) {
+    const response = NextResponse.next()
 
     const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,52 +12,57 @@ export async function middleware(req: NextRequest) {
         {
             cookies: {
                 get(name: string) {
-                    return req.cookies.get(name)?.value
+                    return request.cookies.get(name)?.value
                 },
                 set(name: string, value: string, options: any) {
-                    res.cookies.set({ name, value, ...options })
+                    response.cookies.set({ name, value, ...options })
                 },
                 remove(name: string, options: any) {
-                    res.cookies.set({ name, value: '', ...options })
+                    response.cookies.set({ name, value: '', ...options })
                 },
             },
         }
     )
 
-    // 🔐 Supabase からログイン状態を取得
     const {
-        data: { user },
-    } = await supabase.auth.getUser()
+        data: { session },
+    } = await supabase.auth.getSession()
 
-    const isLoggedIn = !!user
-    const pathname = req.nextUrl.pathname
+    const pathname = request.nextUrl.pathname
 
-    // 🔒 守りたいページ一覧
-    const protectedPaths = [
-        '/dashboard',
-        '/billing',
-        '/checkout',
+    // ===== 公開ページ =====
+    const publicPaths = [
+        '/',
+        '/login',
+        '/signup',
+        '/pricing',
+        '/company',
+        '/contact',
+        '/privacy',
+        '/terms',
     ]
 
-    const isProtected = protectedPaths.some((path) =>
-        pathname.startsWith(path)
-    )
+    if (publicPaths.some((path) => pathname.startsWith(path))) {
+        return response
+    }
 
-    // 🚫 未ログインで保護ページに来たら /login へ
-    if (!isLoggedIn && isProtected) {
-        const loginUrl = req.nextUrl.clone()
+    // ===== 未ログインは login へ =====
+    if (!session) {
+        const loginUrl = request.nextUrl.clone()
         loginUrl.pathname = '/login'
         return NextResponse.redirect(loginUrl)
     }
 
-    return res
+    return response
 }
 
-// 🎯 middleware を適用するパス
 export const config = {
     matcher: [
+        '/dashboard',
         '/dashboard/:path*',
+        '/billing',
         '/billing/:path*',
+        '/checkout',
         '/checkout/:path*',
     ],
 }

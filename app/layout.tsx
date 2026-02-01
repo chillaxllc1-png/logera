@@ -1,11 +1,16 @@
 import './globals.css'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
+import { AuthProvider } from '@/lib/auth/AuthContext'
 import { baseMetadata } from '@/lib/metadata'
 
 export const metadata = baseMetadata
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
     <html lang="ja">
       <body
@@ -15,19 +20,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           color: '#111827',
         }}
       >
-        <Header />
+        <AuthProvider>
+          <Header />
 
-        <main
-          style={{
-            maxWidth: 1100,
-            margin: '0 auto',
-            padding: '0 20px',
-          }}
-        >
-          {children}
-        </main>
+          <main
+            style={{
+              maxWidth: 1100,
+              margin: '0 auto',
+              padding: '0 20px',
+            }}
+          >
+            {children}
+          </main>
 
-        <Footer />
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   )

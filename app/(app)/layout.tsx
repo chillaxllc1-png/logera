@@ -1,34 +1,36 @@
 'use client'
 
 import { ReactNode, useEffect } from 'react'
-import { useAuth } from '@/lib/useAuth'
+import { useAuth } from '@/lib/auth/AuthContext'
 import { useRouter } from 'next/navigation'
 
-export default function AppLayout({ children }: { children: ReactNode }) {
+/**
+ * AppLayout
+ *
+ * 役割：
+ * - 管理画面のログインガードのみ
+ *
+ * 重要：
+ * - isLoading が終わるまで「何も判断しない」
+ */
+export default function AppLayout({
+    children,
+}: {
+    children: ReactNode
+}) {
     const router = useRouter()
-    const { isLoggedIn, hasActiveSubscription, isLoading } = useAuth()
+    const { isLoggedIn, isLoading } = useAuth()
 
     useEffect(() => {
+        // 🔑 初期同期が終わるまで触らない
         if (isLoading) return
 
-        // 未ログイン → ログインへ
         if (!isLoggedIn) {
             router.replace('/login')
-            return
         }
+    }, [isLoading, isLoggedIn, router])
 
-        // 未課金 → billing へ
-        if (!hasActiveSubscription) {
-            router.replace('/billing')
-            return
-        }
-    }, [isLoading, isLoggedIn, hasActiveSubscription, router])
-
-    /* =========================
-       表示制御
-    ========================= */
-
-    // ローディング中（セッション判定中など）
+    // 🔑 初期同期中はローディング表示
     if (isLoading) {
         return (
             <div
@@ -46,11 +48,11 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         )
     }
 
-    // ガード未通過（遷移待ち）
-    if (!isLoggedIn || !hasActiveSubscription) {
+    // 未ログイン（リダイレクト待ち）
+    if (!isLoggedIn) {
         return null
     }
 
-    // 課金済・ログイン済のみ描画
+    // ログイン済み
     return <>{children}</>
 }

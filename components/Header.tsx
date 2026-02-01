@@ -1,15 +1,7 @@
 'use client'
 
-/**
- * Header は認証状態によって表示を切り替える
- * - 未ログイン：販売導線（料金 / ログイン / 新規登録）
- * - ログイン後：管理・契約導線 + 課金状態の明示 +（未課金なら軽い注意）
- *
- * ※ 実際の認証実装後に useAuth / logout 処理を差し替える
- */
-
 import Link from 'next/link'
-import { useAuth } from '@/lib/useAuth'
+import { useAuth } from '@/lib/auth/AuthContext'
 
 export default function Header() {
     const {
@@ -17,7 +9,13 @@ export default function Header() {
         hasActiveSubscription,
         subscriptionPlan,
         logout,
+        isLoading,
     } = useAuth()
+
+    // 初期同期中は描画しない（チラ見防止）
+    if (isLoading || hasActiveSubscription === null) {
+        return null
+    }
 
     return (
         <header
@@ -26,32 +24,16 @@ export default function Header() {
                 background: '#ffffff',
             }}
         >
-            <div
-                style={{
-                    maxWidth: 1100,
-                    margin: '0 auto',
-                    padding: '14px 20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 16,
-                }}
-            >
+            <div style={container}>
                 {/* ロゴ */}
                 <Link
                     href={isLoggedIn ? '/dashboard' : '/'}
-                    style={{
-                        textDecoration: 'none',
-                        color: '#111827',
-                        fontWeight: 800,
-                        fontSize: 18,
-                        letterSpacing: 0.2,
-                    }}
+                    style={logo}
                 >
                     DatLynq
                 </Link>
 
-                {/* ナビゲーション */}
+                {/* ナビ */}
                 {isLoggedIn ? (
                     <LoggedInNav
                         hasActiveSubscription={hasActiveSubscription}
@@ -67,21 +49,19 @@ export default function Header() {
 }
 
 /* =========================
-   未ログイン時
+   未ログイン
 ========================= */
 
 function GuestNav() {
     return (
         <nav style={nav}>
-            <Link href="/pricing" style={navLink}>
+            <Link href="/pricing" style={{ ...navLink, ...noWrap }}>
                 料金
             </Link>
-
-            <Link href="/login" style={navLink}>
+            <Link href="/login" style={{ ...navLink, ...noWrap }}>
                 ログイン
             </Link>
-
-            <Link href="/signup" style={ctaButton}>
+            <Link href="/signup" style={{ ...ctaButton, ...noWrap }}>
                 無料で始める
             </Link>
         </nav>
@@ -105,46 +85,34 @@ function LoggedInNav({
 
     return (
         <nav style={nav}>
-            {/* ① 課金済：最優先で「プラン利用中」 */}
-            {hasActiveSubscription ? (
-                <Link href="/billing" style={planBadge}>
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                    >
-                        <path d="M20 6 9 17l-5-5" />
-                    </svg>
-                    {planLabel} プラン利用中
-                </Link>
-            ) : (
-                /* ③ 未課金：軽い注意（Header補完・最小） */
-                <span style={unpaidNote}>
-                    ※ 未課金です（一部機能が制限されます）
-                </span>
+            {/* 課金済 */}
+            {hasActiveSubscription === true && (
+                <>
+                    <Link href="/billing" style={{ ...planBadge, ...noWrap }}>
+                        {planLabel} プラン利用中
+                    </Link>
+
+                    <Link href="/dashboard" style={{ ...navLink, ...noWrap }}>
+                        管理画面
+                    </Link>
+                </>
             )}
 
-            <Link href="/dashboard" style={navLink}>
-                管理画面
-            </Link>
+            {/* 未課金：CTA は1つだけ */}
+            {hasActiveSubscription === false && (
+                <Link href="/billing" style={{ ...upgradeButton, ...noWrap }}>
+                    プランを確認する
+                </Link>
+            )}
 
-            <Link href="/billing" style={navLink}>
+            <Link href="/billing" style={{ ...navLink, ...noWrap }}>
                 請求・契約
             </Link>
 
-            {/* ログアウト：デモ用に一時的に有効化 */}
             <button
                 type="button"
                 onClick={onLogout}
-                style={logoutButton}
-                aria-label="ログアウト"
+                style={{ ...logoutButton, ...noWrap }}
             >
                 ログアウト
             </button>
@@ -156,59 +124,71 @@ function LoggedInNav({
    styles
 ========================= */
 
+const container: React.CSSProperties = {
+    maxWidth: 1100,
+    margin: '0 auto',
+    padding: '14px 20px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    flexWrap: 'wrap',
+}
+
+const logo: React.CSSProperties = {
+    textDecoration: 'none',
+    color: '#111827',
+    fontWeight: 800,
+    fontSize: 18,
+}
+
 const nav: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: 16,
+    gap: 10,
     flexWrap: 'wrap',
+
+    // ★ これが重要
+    marginLeft: 'auto',   // ← 常に右側へ寄せる
 }
 
 const navLink: React.CSSProperties = {
     textDecoration: 'none',
     color: '#374151',
     fontWeight: 600,
+    fontSize: 13,
 }
 
 const ctaButton: React.CSSProperties = {
-    textDecoration: 'none',
     padding: '8px 14px',
     borderRadius: 10,
     background: '#111827',
     color: '#ffffff',
     fontWeight: 700,
-    whiteSpace: 'nowrap',
+    textDecoration: 'none',
+    fontSize: 13,
 }
 
-/* ① 課金状態バッジ（強化・クリック可） */
 const planBadge: React.CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 6,
-    padding: '6px 14px',
+    padding: '6px 12px',
     borderRadius: 999,
     background: '#ecfeff',
     border: '1px solid #67e8f9',
     color: '#155e75',
-    fontSize: 13,
-    fontWeight: 800,
-    whiteSpace: 'nowrap',
-    textDecoration: 'none',
-    cursor: 'pointer',
-}
-
-/* ③ 未課金の軽い注意（Header補完・最小） */
-const unpaidNote: React.CSSProperties = {
-    padding: '6px 10px',
-    borderRadius: 999,
-    background: '#fffbeb',
-    border: '1px solid #fde68a',
-    color: '#92400e',
     fontSize: 12,
-    fontWeight: 700,
-    whiteSpace: 'nowrap',
+    fontWeight: 800,
+    textDecoration: 'none',
 }
 
-/* ログアウト（デモ用に有効化） */
+const upgradeButton: React.CSSProperties = {
+    padding: '8px 14px',
+    borderRadius: 999,
+    background: '#111827',
+    color: '#ffffff',
+    fontWeight: 800,
+    fontSize: 13,
+    textDecoration: 'none',
+}
+
 const logoutButton: React.CSSProperties = {
     padding: '6px 12px',
     borderRadius: 10,
@@ -218,4 +198,13 @@ const logoutButton: React.CSSProperties = {
     fontSize: 13,
     fontWeight: 700,
     cursor: 'pointer',
+}
+
+/**
+ * ✅ ここが本命
+ * 日本語が「プランを確 / 認する」みたいに割れるのを止める
+ */
+const noWrap: React.CSSProperties = {
+    whiteSpace: 'nowrap',
+    wordBreak: 'keep-all',
 }
