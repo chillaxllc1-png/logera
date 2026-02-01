@@ -14,10 +14,10 @@ export async function createSupabaseServer() {
                     return cookieStore.get(name)?.value
                 },
                 set() {
-                    // Server Components では使用しない（必須だが空でOK）
+                    // Server Components では使用しない
                 },
                 remove() {
-                    // Server Components では使用しない（必須だが空でOK）
+                    // Server Components では使用しない
                 },
             },
         }
