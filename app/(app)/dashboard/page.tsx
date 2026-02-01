@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth/AuthContext'
 import RequireSubscription from '@/components/RequireSubscription'
+import { FEATURE_LIST } from '@/lib/features'
+import ReadOnlyGuard from '@/components/ReadOnlyGuard'
 
 function PartyPopperIcon() {
     return (
@@ -33,225 +35,146 @@ function PartyPopperIcon() {
 }
 
 export default function Dashboard() {
-    const { hasActiveSubscription, isLoading, user } = useAuth()
+    const {
+        hasActiveSubscription,
+        subscriptionStatus,
+        currentPeriodEnd,
+        cancelAtPeriodEnd,
+        isLoading,
+        user,
+    } = useAuth()
+
+    // ✅ 読み取り専用判定（past_due / expired）
+    // 説明UI用（操作制御は ReadOnlyGuard に委譲）
+    const isReadOnly =
+        subscriptionStatus === 'past_due' ||
+        subscriptionStatus === 'expired'
+
+    const readOnlyReason =
+        subscriptionStatus === 'past_due'
+            ? 'お支払いが確認できていません'
+            : subscriptionStatus === 'expired'
+                ? 'サブスクリプションの有効期限が切れています'
+                : undefined
 
     const [showWelcome, setShowWelcome] = useState(false)
     const [showActivated, setShowActivated] = useState(false)
 
-    /**
-     * ✅ 重要：ローカルストレージキーは「ユーザー単位」
-     * - 別ユーザーでログインした時に混ざるのを防ぐ
-     */
     const uid = user?.id ?? 'guest'
     const welcomeKey = `datlynq:welcomeShown:${uid}`
-    const activatedKey = `datlynq:subscriptionActivated:${uid}`
 
-    // =========================
-    // 初回 Welcome 表示（課金済みになった時だけ1回）
-    // =========================
     useEffect(() => {
         if (hasActiveSubscription !== true) return
-
-        const alreadyShown = localStorage.getItem(welcomeKey)
-        if (!alreadyShown) {
+        if (!localStorage.getItem(welcomeKey)) {
             setShowWelcome(true)
             localStorage.setItem(welcomeKey, 'true')
         }
     }, [hasActiveSubscription, welcomeKey])
 
-    // =========================
-    // 課金完了バナー（1回だけ）
-    // - hasActiveSubscription が true になったタイミングで一度だけ出す
-    // =========================
     useEffect(() => {
         if (hasActiveSubscription !== true) return
-
-        const fromCheckout = sessionStorage.getItem('datlynq:fromCheckout')
-        if (!fromCheckout) return
-
-        setShowActivated(true)
-
-        // 1回きりにする（ここが肝）
-        sessionStorage.removeItem('datlynq:fromCheckout')
+        if (sessionStorage.getItem('datlynq:fromCheckout')) {
+            setShowActivated(true)
+            sessionStorage.removeItem('datlynq:fromCheckout')
+        }
     }, [hasActiveSubscription])
 
-    // =========================
-    // 描画ガード（真っ白禁止）
-    // =========================
-    // 認証中 or DB未同期(null) の時は「読み込み中」を出す（null返しは禁止）
     if (isLoading || hasActiveSubscription === null) {
-        return (
-            <section
-                style={{
-                    maxWidth: 980,
-                    margin: '0 auto',
-                    padding: '56px 20px 80px',
-                    lineHeight: 1.7,
-                    color: '#6b7280',
-                    fontSize: 14,
-                }}
-            >
-                読み込み中…
-            </section>
-        )
+        return <section style={{ padding: 40 }}>読み込み中…</section>
     }
 
     return (
         <section
-            style={{
-                maxWidth: 980,
-                margin: '0 auto',
-                padding: '56px 20px 80px',
-                lineHeight: 1.7,
-            }}
+            style={{ maxWidth: 980, margin: '0 auto', padding: '56px 20px' }}
         >
-            <h1 style={{ margin: '0 0 12px', fontSize: 28 }}>管理画面</h1>
-
-            {/* ✅ 課金完了（1回だけ） */}
-            {showActivated && (
-                <div
-                    style={{
-                        margin: '0 0 16px',
-                        padding: '14px 16px',
-                        borderRadius: 14,
-                        background: '#ecfdf5',
-                        border: '1px solid #6ee7b7',
-                        color: '#065f46',
-                        fontWeight: 800,
-                    }}
-                >
-                    <div
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 8,
-                            marginBottom: 6,
-                        }}
-                    >
-                        <PartyPopperIcon />
-                        <span>お支払いが完了しました！</span>
-                    </div>
-                    <div>DatLynq のすべての機能をご利用いただけます。</div>
-                </div>
-            )}
-
-            {/* 🎉 初回Welcome（課金済のみ・1回だけ） */}
-            {!showActivated && showWelcome && hasActiveSubscription === true && (
-                <p
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        margin: '0 0 24px',
-                        color: '#065f46',
-                        fontWeight: 700,
-                        background: '#ecfdf5',
-                        padding: '12px 14px',
-                        borderRadius: 12,
-                        border: '1px solid #6ee7b7',
-                    }}
-                >
-                    ご契約ありがとうございます。DatLynq の全機能をご利用いただけます。
-                </p>
-            )}
-
-            <p style={{ margin: '0 0 20px', color: '#374151' }}>
-                DatLynq の管理画面です。ここからデータの確認や、契約内容の管理を行います。
-            </p>
+            <h1 style={{ fontSize: 28 }}>管理画面</h1>
 
             {/* =========================
-                未課金ユーザー向けメイン CTA（★1つだけ）
+                読み取り専用モード バナー
             ========================= */}
-            {hasActiveSubscription === false && (
+            {isReadOnly && (
                 <div
                     style={{
-                        margin: '0 0 32px',
-                        padding: 20,
-                        borderRadius: 16,
-                        background: '#fffbeb',
+                        margin: '16px 0',
+                        padding: '14px 16px',
+                        borderRadius: 14,
+                        background: '#fef3c7',
                         border: '1px solid #fde68a',
+                        color: '#92400e',
+                        fontWeight: 700,
+                        fontSize: 14,
                     }}
                 >
-                    <p
-                        style={{
-                            margin: '0 0 12px',
-                            fontWeight: 800,
-                            color: '#92400e',
-                        }}
-                    >
-                        Starter プラン以上でご利用いただけます
-                    </p>
-
+                    現在このアカウントは
+                    <strong> 読み取り専用モード </strong>
+                    です。
+                    <br />
+                    操作を再開するには
                     <Link
                         href="/billing"
                         style={{
-                            display: 'inline-block',
-                            padding: '10px 16px',
-                            borderRadius: 999,
-                            background: '#111827',
-                            color: '#ffffff',
-                            fontWeight: 800,
-                            fontSize: 14,
-                            textDecoration: 'none',
-                            whiteSpace: 'nowrap',
-                            wordBreak: 'keep-all',
+                            marginLeft: 4,
+                            textDecoration: 'underline',
                         }}
                     >
-                        プランを確認する
+                        請求・契約を確認してください
                     </Link>
                 </div>
+            )}
+
+            {/* 解約予約中 */}
+            {hasActiveSubscription === true &&
+                cancelAtPeriodEnd &&
+                currentPeriodEnd && (
+                    <div style={warningBanner}>
+                        解約予約中：
+                        {new Date(currentPeriodEnd).toLocaleDateString('ja-JP')}
+                        までご利用いただけます
+                    </div>
+                )}
+
+            {showActivated && (
+                <div style={{ margin: '16px 0', color: '#065f46' }}>
+                    <PartyPopperIcon /> お支払いが完了しました！
+                </div>
+            )}
+
+            {showWelcome && (
+                <p style={{ marginBottom: 20 }}>
+                    ご契約ありがとうございます。DatLynq の機能をご利用いただけます。
+                </p>
             )}
 
             {/* =========================
                 機能カード
             ========================= */}
-            <div
-                style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-                    gap: 16,
-                }}
-            >
-                {/* 有料機能① */}
-                <RequireSubscription featureKey="order_refund_history">
-                    <div style={card}>
-                        <h2 style={cardTitle}>注文・返金履歴</h2>
-                        <p style={cardBody}>
-                            注文や返金対応の履歴を、顧客単位・時系列で確認できます。
-                        </p>
+            <div style={grid}>
+                {FEATURE_LIST.map((feature) => (
+                    <RequireSubscription
+                        key={feature.key}
+                        featureKey={feature.key}
+                    >
+                        <ReadOnlyGuard
+                            isReadOnly={isReadOnly}
+                            reason={readOnlyReason}
+                        >
+                            <div style={card}>
+                                <h2>{feature.name}</h2>
+                                <p>{feature.description}</p>
 
-                        <button style={primaryButton}>利用する</button>
-                    </div>
-                </RequireSubscription>
+                                <button style={primaryButton}>利用する</button>
+                            </div>
+                        </ReadOnlyGuard>
+                    </RequireSubscription>
+                ))}
 
-                {/* 有料機能② */}
-                <RequireSubscription featureKey="trend_analysis">
-                    <div style={card}>
-                        <h2 style={cardTitle}>傾向の確認</h2>
-                        <p style={cardBody}>
-                            過去データと比較した傾向を、参考情報として確認できます。
-                        </p>
-
-                        <button style={primaryButton}>利用する</button>
-                    </div>
-                </RequireSubscription>
-
-                {/* 無料機能 */}
+                {/* 無料カード */}
                 <div style={card}>
-                    <h2 style={cardTitle}>請求・契約</h2>
-                    <p style={cardBody}>
-                        現在のプラン内容、請求状況の確認、プラン変更や解約手続きを行えます。
-                    </p>
-
-                    <Link href="/billing" style={primaryLink}>
-                        請求・契約を開く
-                    </Link>
+                    <h2>請求・契約</h2>
+                    <p>プラン確認・変更・解約はこちら。</p>
+                    <Link href="/billing">請求・契約を開く</Link>
                 </div>
             </div>
-
-            <p style={{ marginTop: 32, fontSize: 13, color: '#6b7280' }}>
-                ※ 本管理画面は初期表示イメージです。機能は順次実装予定です。
-            </p>
         </section>
     )
 }
@@ -260,33 +183,16 @@ export default function Dashboard() {
    styles
 ========================= */
 
+const grid: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+    gap: 16,
+}
+
 const card: React.CSSProperties = {
     border: '1px solid #e5e7eb',
     borderRadius: 16,
     padding: 20,
-    background: '#ffffff',
-}
-
-const cardTitle: React.CSSProperties = {
-    margin: '0 0 8px',
-    fontSize: 18,
-}
-
-const cardBody: React.CSSProperties = {
-    margin: '0 0 14px',
-    color: '#374151',
-}
-
-const primaryLink: React.CSSProperties = {
-    display: 'inline-block',
-    padding: '10px 14px',
-    borderRadius: 10,
-    background: '#111827',
-    color: '#ffffff',
-    fontWeight: 700,
-    textDecoration: 'none',
-    whiteSpace: 'nowrap',
-    wordBreak: 'keep-all',
 }
 
 const primaryButton: React.CSSProperties = {
@@ -294,7 +200,17 @@ const primaryButton: React.CSSProperties = {
     borderRadius: 10,
     border: 'none',
     background: '#111827',
-    color: '#ffffff',
+    color: '#fff',
     fontWeight: 700,
-    cursor: 'pointer',
+}
+
+const warningBanner: React.CSSProperties = {
+    margin: '16px 0',
+    padding: '12px 16px',
+    borderRadius: 12,
+    background: '#fffbeb',
+    border: '1px solid #fde68a',
+    color: '#92400e',
+    fontWeight: 700,
+    fontSize: 14,
 }

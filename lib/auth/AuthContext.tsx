@@ -8,9 +8,15 @@ import React, {
     useState,
 } from 'react'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
-import { fetchActiveSubscriptionSnapshotByUserId } from '@/lib/supabase/subscriptions'
+import {
+    fetchActiveSubscriptionSnapshotByUserId,
+    type ActiveSubscriptionSnapshot,
+} from '@/lib/supabase/subscriptions'
+import type { FeatureKey, PlanKey } from '@/lib/features'
 
-export type SubscriptionPlan = 'starter' | 'pro' | null
+/* =========================
+   型定義
+========================= */
 
 export type User = {
     id: string
@@ -23,11 +29,16 @@ type AuthContextType = {
 
     // null = DB未同期 / true,false = 同期後
     hasActiveSubscription: boolean | null
-    subscriptionPlan: SubscriptionPlan
+    subscriptionPlan: PlanKey | null
 
-    // ✅ 機能キー（plan_features）
-    featureKeys: string[]
-    canUseFeature: (featureKey: string) => boolean
+    // subscription 詳細（STEP6用）
+    subscriptionStatus: ActiveSubscriptionSnapshot['status']
+    currentPeriodEnd: string | null
+    cancelAtPeriodEnd: boolean
+
+    // feature ベース制御
+    featureKeys: FeatureKey[]
+    canUseFeature: (featureKey: FeatureKey) => boolean
 
     // session確定中のみ true
     isLoading: boolean
@@ -36,9 +47,16 @@ type AuthContextType = {
     logout: () => Promise<void>
 }
 
+/* =========================
+   Context
+========================= */
+
 const AuthContext = createContext<AuthContextType | null>(null)
 
-/** DB取得が詰まってもアプリを固めないためのタイムアウト */
+/* =========================
+   util
+========================= */
+
 function withTimeout<T>(p: Promise<T>, ms = 6000): Promise<T> {
     return Promise.race([
         p,
@@ -48,8 +66,11 @@ function withTimeout<T>(p: Promise<T>, ms = 6000): Promise<T> {
     ])
 }
 
+/* =========================
+   Provider
+========================= */
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-    // ✅ client component 内で生成（トップレベル生成しない）
     const supabase = useMemo(() => getSupabaseBrowserClient(), [])
 
     const [user, setUser] = useState<User | null>(null)
@@ -59,12 +80,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         useState<boolean | null>(null)
 
     const [subscriptionPlan, setSubscriptionPlan] =
-        useState<SubscriptionPlan>(null)
+        useState<PlanKey | null>(null)
 
-    const [featureKeys, setFeatureKeys] = useState<string[]>([])
+    const [subscriptionStatus, setSubscriptionStatus] =
+        useState<ActiveSubscriptionSnapshot['status']>(null)
 
-    // session確定用
+    const [currentPeriodEnd, setCurrentPeriodEnd] =
+        useState<string | null>(null)
+
+    const [cancelAtPeriodEnd, setCancelAtPeriodEnd] =
+        useState<boolean>(false)
+
+    const [featureKeys, setFeatureKeys] = useState<FeatureKey[]>([])
+
     const [isLoading, setIsLoading] = useState(true)
+
+    /* =========================
+       subscription 同期
+    ========================= */
 
     const syncSubscriptionFromDB = async (uid: string) => {
         try {
@@ -73,10 +106,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 6000
             )
 
+            setSubscriptionStatus(snap.status)
+            setCurrentPeriodEnd(snap.currentPeriodEnd)
+            setCancelAtPeriodEnd(snap.cancelAtPeriodEnd)
+
             if (snap.isActive) {
                 setHasActiveSubscription(true)
                 setSubscriptionPlan(snap.planKey)
-                setFeatureKeys(snap.featureKeys ?? [])
+                setFeatureKeys(snap.featureKeys)
             } else {
                 setHasActiveSubscription(false)
                 setSubscriptionPlan(null)
@@ -87,6 +124,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setHasActiveSubscription(null)
             setSubscriptionPlan(null)
             setFeatureKeys([])
+            setSubscriptionStatus(null)
+            setCurrentPeriodEnd(null)
+            setCancelAtPeriodEnd(false)
         }
     }
 
@@ -94,6 +134,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!user?.id) return
         await syncSubscriptionFromDB(user.id)
     }
+
+    /* =========================
+       Auth session 管理
+    ========================= */
 
     useEffect(() => {
         let alive = true
@@ -107,6 +151,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setHasActiveSubscription(null)
                 setSubscriptionPlan(null)
                 setFeatureKeys([])
+                setSubscriptionStatus(null)
+                setCurrentPeriodEnd(null)
+                setCancelAtPeriodEnd(false)
                 setIsLoading(false)
                 return
             }
@@ -118,11 +165,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             setUser(u)
             setIsLoggedIn(true)
-
-            // session は確定
             setIsLoading(false)
 
-            // DB同期は裏で
             syncSubscriptionFromDB(u.id)
         }
 
@@ -138,6 +182,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setHasActiveSubscription(null)
                     setSubscriptionPlan(null)
                     setFeatureKeys([])
+                    setSubscriptionStatus(null)
+                    setCurrentPeriodEnd(null)
+                    setCancelAtPeriodEnd(false)
                     setIsLoading(false)
                 }
             }
@@ -145,15 +192,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         boot()
 
-        const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-            applySession(session)
-        })
+        const { data } = supabase.auth.onAuthStateChange(
+            (_event, session) => {
+                applySession(session)
+            }
+        )
 
         return () => {
             alive = false
             data.subscription.unsubscribe()
         }
     }, [supabase])
+
+    /* =========================
+       logout
+    ========================= */
 
     const logout = async () => {
         try {
@@ -164,17 +217,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setHasActiveSubscription(null)
             setSubscriptionPlan(null)
             setFeatureKeys([])
+            setSubscriptionStatus(null)
+            setCurrentPeriodEnd(null)
+            setCancelAtPeriodEnd(false)
             setIsLoading(false)
         }
     }
 
-    const featureSet = useMemo(() => new Set(featureKeys), [featureKeys])
+    /* =========================
+       feature 判定
+    ========================= */
 
-    const canUseFeature = (featureKey: string) => {
-        // DB未同期の間は false（チラ見防止）
+    const featureSet = useMemo(
+        () => new Set(featureKeys),
+        [featureKeys]
+    )
+
+    const canUseFeature = (featureKey: FeatureKey) => {
         if (hasActiveSubscription !== true) return false
         return featureSet.has(featureKey)
     }
+
+    /* =========================
+       Context value
+    ========================= */
 
     const value = useMemo<AuthContextType>(
         () => ({
@@ -182,6 +248,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             isLoggedIn,
             hasActiveSubscription,
             subscriptionPlan,
+            subscriptionStatus,
+            currentPeriodEnd,
+            cancelAtPeriodEnd,
             featureKeys,
             canUseFeature,
             isLoading,
@@ -193,14 +262,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             isLoggedIn,
             hasActiveSubscription,
             subscriptionPlan,
+            subscriptionStatus,
+            currentPeriodEnd,
+            cancelAtPeriodEnd,
             featureKeys,
-            canUseFeature,
             isLoading,
         ]
     )
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
+
+/* =========================
+   hook
+========================= */
 
 export function useAuth() {
     const ctx = useContext(AuthContext)

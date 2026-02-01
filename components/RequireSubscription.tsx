@@ -3,6 +3,7 @@
 import { ReactNode } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth/AuthContext'
+import type { FeatureKey } from '@/lib/features'
 
 function LockIcon() {
     return (
@@ -25,26 +26,63 @@ function LockIcon() {
     )
 }
 
+type RequireSubscriptionProps = {
+    children: ReactNode
+    featureKey: FeatureKey
+}
+
 export default function RequireSubscription({
     children,
     featureKey,
-}: {
-    children: ReactNode
-    featureKey: string
-}) {
-    const { hasActiveSubscription, isLoading, canUseFeature } = useAuth()
+}: RequireSubscriptionProps) {
+    const {
+        hasActiveSubscription,
+        subscriptionPlan,
+        isLoading,
+        canUseFeature,
+    } = useAuth()
 
+    // =========================
     // 認証・DB同期中は描画しない（チラ見防止）
+    // =========================
     if (isLoading || hasActiveSubscription === null) {
         return null
     }
 
-    // ✅ 機能が使える → そのまま表示
+    // =========================
+    // 機能が使える → そのまま表示
+    // =========================
     if (canUseFeature(featureKey)) {
         return <>{children}</>
     }
 
-    // ❌ 機能が使えない → ロック表示
+    // =========================
+    // ロック文言の出し分け（STEP1の本体）
+    // =========================
+
+    /**
+     * ケース整理：
+     * - hasActiveSubscription === false → 未契約
+     * - hasActiveSubscription === true && subscriptionPlan === 'starter' → Pro未満
+     * - それ以外 → 想定外（将来拡張・保険）
+     */
+
+    let titleText = '有料プラン限定機能'
+    let descriptionText = 'この機能は現在のプランではご利用いただけません'
+
+    if (hasActiveSubscription === false) {
+        titleText = '有料プラン限定機能'
+        descriptionText =
+            'この機能を利用するには、プランの契約が必要です'
+    } else if (subscriptionPlan === 'starter') {
+        titleText = 'Pro プラン限定機能'
+        descriptionText =
+            'この機能は Pro プランでご利用いただけます'
+    }
+
+    // =========================
+    // ロック表示
+    // =========================
     return (
         <div
             style={{
@@ -95,7 +133,7 @@ export default function RequireSubscription({
                         }}
                     >
                         <LockIcon />
-                        有料プラン限定機能
+                        {titleText}
                     </p>
 
                     <p
@@ -105,7 +143,7 @@ export default function RequireSubscription({
                             color: '#92400e',
                         }}
                     >
-                        Starter プラン以上でご利用いただけます
+                        {descriptionText}
                     </p>
 
                     <Link
@@ -120,7 +158,6 @@ export default function RequireSubscription({
                             fontSize: 14,
                             textDecoration: 'none',
                             whiteSpace: 'nowrap',
-                            wordBreak: 'keep-all',
                         }}
                     >
                         プランを確認する

@@ -3,9 +3,17 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth/AuthContext'
+import { FEATURES } from '@/lib/features'
 
 export default function Billing() {
-    const { hasActiveSubscription, subscriptionPlan, isLoading } = useAuth()
+    const {
+        hasActiveSubscription,
+        subscriptionPlan,
+        subscriptionStatus,
+        currentPeriodEnd,
+        cancelAtPeriodEnd,
+        isLoading,
+    } = useAuth()
 
     const [showCanceled, setShowCanceled] = useState(false)
 
@@ -22,44 +30,50 @@ export default function Billing() {
 
     // 読み込み中（真っ白禁止）
     if (isLoading || hasActiveSubscription === null) {
-        return (
-            <section
-                style={{
-                    maxWidth: 720,
-                    margin: '0 auto',
-                    padding: '56px 20px 80px',
-                    lineHeight: 1.7,
-                    color: '#6b7280',
-                    fontSize: 14,
-                }}
-            >
-                読み込み中…
-            </section>
-        )
+        return <section style={loadingStyle}>読み込み中…</section>
     }
 
-    const planLabel = subscriptionPlan ?? 'Starter'
+    const currentPlan = subscriptionPlan ?? 'starter'
+
+    const periodEndLabel = currentPeriodEnd
+        ? new Date(currentPeriodEnd).toLocaleDateString('ja-JP')
+        : null
 
     return (
-        <section
-            style={{
-                maxWidth: 720,
-                margin: '0 auto',
-                padding: '56px 20px 80px',
-                lineHeight: 1.7,
-            }}
-        >
-            <h1 style={{ margin: '0 0 12px', fontSize: 28 }}>
-                請求・契約
-            </h1>
+        <section style={container}>
+            <h1 style={title}>請求・契約</h1>
 
             {/* =========================
-                checkout キャンセル通知（1回だけ）
-            ========================= */}
-            {showCanceled && (
+   サブスクリプション状態アラート
+========================= */}
+
+            {subscriptionStatus === 'past_due' && (
                 <div
                     style={{
-                        margin: '0 0 20px',
+                        margin: '16px 0',
+                        padding: '14px 16px',
+                        borderRadius: 14,
+                        background: '#fef2f2',
+                        border: '1px solid #fecaca',
+                        color: '#991b1b',
+                        fontWeight: 700,
+                    }}
+                >
+                    お支払いに失敗しています。
+                    <br />
+                    お支払い方法を更新してください。
+                    <div style={{ marginTop: 8 }}>
+                        <Link href="/checkout" style={{ textDecoration: 'underline' }}>
+                            お支払いを再開する
+                        </Link>
+                    </div>
+                </div>
+            )}
+
+            {subscriptionStatus === 'expired' && (
+                <div
+                    style={{
+                        margin: '16px 0',
                         padding: '14px 16px',
                         borderRadius: 14,
                         background: '#fffbeb',
@@ -68,13 +82,47 @@ export default function Billing() {
                         fontWeight: 700,
                     }}
                 >
+                    サブスクリプションの有効期限が切れています。
+                    <br />
+                    再契約するとすべての機能が再度利用できます。
+                    <div style={{ marginTop: 8 }}>
+                        <Link href="/checkout" style={{ textDecoration: 'underline' }}>
+                            再契約する
+                        </Link>
+                    </div>
+                </div>
+            )}
+
+            {subscriptionStatus === 'canceled' && (
+                <div
+                    style={{
+                        margin: '16px 0',
+                        padding: '14px 16px',
+                        borderRadius: 14,
+                        background: '#f3f4f6',
+                        border: '1px solid #e5e7eb',
+                        color: '#374151',
+                        fontWeight: 700,
+                    }}
+                >
+                    現在サブスクリプションは解約されています。
+                    <div style={{ marginTop: 8 }}>
+                        <Link href="/checkout" style={{ textDecoration: 'underline' }}>
+                            再契約する
+                        </Link>
+                    </div>
+                </div>
+            )}
+
+            {showCanceled && (
+                <div style={warningBox}>
                     今回のお支払い手続きは完了していません。
                     <br />
                     プランはいつでも後から契約できます。
                 </div>
             )}
 
-            <p style={{ margin: '0 0 28px', color: '#374151' }}>
+            <p style={lead}>
                 現在のプラン内容、請求状況の確認、
                 プラン変更や解約手続きを行えます。
             </p>
@@ -86,133 +134,152 @@ export default function Billing() {
                 <h2 style={cardTitle}>現在の契約内容</h2>
 
                 <dl style={dl}>
-                    <div style={row}>
-                        <dt style={dt}>契約プラン</dt>
-                        <dd style={dd}>
-                            {hasActiveSubscription ? planLabel : '未契約'}
-                        </dd>
-                    </div>
+                    <Row label="契約状態">
+                        {subscriptionStatus ?? '—'}
+                        {cancelAtPeriodEnd && (
+                            <span style={{ color: '#b45309', marginLeft: 8 }}>
+                                （解約予約中）
+                            </span>
+                        )}
+                    </Row>
 
-                    <div style={row}>
-                        <dt style={dt}>月額料金</dt>
-                        <dd style={dd}>
-                            {hasActiveSubscription ? '19,800円（税込）' : '—'}
-                        </dd>
-                    </div>
+                    <Row label="有効期限">
+                        {periodEndLabel ? `${periodEndLabel} まで` : '—'}
+                    </Row>
 
-                    <div style={row}>
-                        <dt style={dt}>次回請求日</dt>
-                        <dd style={dd}>
-                            {hasActiveSubscription
-                                ? '2026年3月31日（予定）'
-                                : '—'}
-                        </dd>
-                    </div>
+                    <Row label="契約プラン">
+                        {hasActiveSubscription ? currentPlan : '未契約'}
+                    </Row>
 
-                    <div style={row}>
-                        <dt style={dt}>支払方法</dt>
-                        <dd style={dd}>
-                            {hasActiveSubscription
-                                ? 'クレジットカード（pay.jp）'
-                                : '—'}
-                        </dd>
-                    </div>
+                    <Row label="月額料金">
+                        {hasActiveSubscription
+                            ? currentPlan === 'pro'
+                                ? '49,800円（税込）'
+                                : '19,800円（税込）'
+                            : '—'}
+                    </Row>
 
-                    <div style={row}>
-                        <dt style={dt}>課金タイミング</dt>
-                        <dd style={dd}>
-                            {hasActiveSubscription
-                                ? '初回申込日を起点として、毎月同日に自動課金'
-                                : '—'}
-                        </dd>
-                    </div>
+                    <Row label="支払方法">
+                        {hasActiveSubscription
+                            ? 'クレジットカード（pay.jp）'
+                            : '—'}
+                    </Row>
                 </dl>
+
+                {hasActiveSubscription === true &&
+                    cancelAtPeriodEnd &&
+                    currentPeriodEnd && (
+                        <div
+                            style={{
+                                marginTop: 12,
+                                padding: '12px 14px',
+                                borderRadius: 12,
+                                background: '#fffbeb',
+                                border: '1px solid #fde68a',
+                                color: '#92400e',
+                                fontSize: 14,
+                                fontWeight: 700,
+                            }}
+                        >
+                            解約予約中：
+                            {new Date(currentPeriodEnd).toLocaleDateString('ja-JP')}
+                            までご利用いただけます
+                        </div>
+                    )}
             </div>
 
             {/* =========================
-                未課金のみ：支払い手続き
+                プラン別 機能一覧
             ========================= */}
-            {hasActiveSubscription === false && (
-                <div
-                    style={{
-                        ...card,
-                        marginTop: 24,
-                        borderColor: '#111827',
-                        background: '#f9fafb',
-                    }}
-                >
-                    <h2 style={cardTitle}>お支払い手続き</h2>
+            <div style={{ ...card, marginTop: 24 }}>
+                <h2 style={cardTitle}>プラン別 機能一覧</h2>
 
-                    <p style={{ margin: '0 0 12px', color: '#374151' }}>
-                        DatLynq の各種有料機能は、
-                        <strong> Starter プラン以上でご利用いただけます。</strong>
-                        <br />
-                        プラン内容を確認し、お支払い手続きを行うことで、
-                        管理画面の全機能をご利用いただけます。
-                    </p>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                    {Object.values(FEATURES).map((feature) => {
+                        const enabled =
+                            hasActiveSubscription &&
+                            feature.availablePlans.includes(currentPlan)
 
-                    <p
-                        style={{
-                            margin: '0 0 16px',
-                            fontSize: 14,
-                            color: '#6b7280',
-                        }}
-                    >
-                        ※ 初回お申し込み時に当月分の利用料金が発生します。
-                        日割り計算は行いません。
-                    </p>
+                        return (
+                            <li
+                                key={feature.key}
+                                style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    padding: '10px 0',
+                                    borderBottom: '1px solid #f3f4f6',
+                                }}
+                            >
+                                <div>
+                                    <div style={{ fontWeight: 600 }}>
+                                        {feature.name}
+                                    </div>
+                                    <div
+                                        style={{
+                                            fontSize: 13,
+                                            color: '#6b7280',
+                                        }}
+                                    >
+                                        {feature.description}
+                                    </div>
+                                </div>
 
-                    <Link href="/checkout" style={payButton}>
-                        プランを確認する
-                    </Link>
-                </div>
-            )}
+                                <div
+                                    style={{
+                                        fontWeight: 800,
+                                        color: enabled
+                                            ? '#065f46'
+                                            : '#92400e',
+                                    }}
+                                >
+                                    {enabled ? '✔ 利用可能' : '🔒 上位プラン'}
+                                </div>
+                            </li>
+                        )
+                    })}
+                </ul>
+            </div>
 
             {/* =========================
-                解約について（課金済みのみ）
+                CTA
             ========================= */}
-            {hasActiveSubscription === true && (
-                <div
-                    style={{
-                        ...card,
-                        marginTop: 24,
-                        borderColor: '#ef4444',
-                        background: '#fff5f5',
-                    }}
-                >
-                    <h2 style={cardTitle}>解約について</h2>
+            {hasActiveSubscription === false && (
+                <Link href="/checkout" style={payButton}>
+                    Starter プランを契約する
+                </Link>
+            )}
 
-                    <p style={{ margin: '0 0 12px', color: '#374151' }}>
-                        解約はいつでも行うことができます。
-                        解約手続き後も、当月の契約期間末日までは本サービスを利用できます。
-                    </p>
-
-                    <p
+            {hasActiveSubscription === true &&
+                subscriptionPlan === 'starter' && (
+                    <Link
+                        href="/checkout"
                         style={{
-                            margin: '0 0 16px',
-                            fontSize: 14,
-                            color: '#6b7280',
+                            ...payButton,
+                            background: '#4f46e5',
+                            marginTop: 12,
                         }}
                     >
-                        ※ 解約手続きが完了した時点で、翌月以降の請求は発生しません。
-                        契約期間途中で解約された場合でも、
-                        すでに支払われた利用料金の返金は行いません。
-                    </p>
+                        Pro プランへアップグレード
+                    </Link>
+                )}
 
+            {/* =========================
+                解約（準備中）
+            ========================= */}
+            {hasActiveSubscription === true && (
+                <div style={{ ...card, marginTop: 24, background: '#fff5f5' }}>
+                    <h2 style={cardTitle}>解約について</h2>
+                    <p style={{ fontSize: 14, color: '#6b7280' }}>
+                        解約はいつでも可能です。
+                        解約後も有効期限まではご利用いただけます。
+                    </p>
                     <button disabled style={dangerButton}>
                         解約手続き（準備中）
                     </button>
                 </div>
             )}
 
-            {/* 補足 */}
-            <p style={{ marginTop: 32, fontSize: 13, color: '#6b7280' }}>
-                ※ 本ページは初期表示イメージです。
-                実際の請求・決済処理は順次実装予定です。
-            </p>
-
-            {/* 戻る */}
-            <div style={{ marginTop: 24 }}>
+            <div style={{ marginTop: 32 }}>
                 <Link href="/dashboard" style={backLink}>
                     管理画面に戻る
                 </Link>
@@ -222,43 +289,89 @@ export default function Billing() {
 }
 
 /* =========================
+   小物
+========================= */
+
+function Row({
+    label,
+    children,
+}: {
+    label: string
+    children: React.ReactNode
+}) {
+    return (
+        <div style={row}>
+            <dt style={dt}>{label}</dt>
+            <dd style={dd}>{children}</dd>
+        </div>
+    )
+}
+
+/* =========================
    styles（元のまま）
 ========================= */
 
-const card: React.CSSProperties = {
+const container = {
+    maxWidth: 720,
+    margin: '0 auto',
+    padding: '56px 20px 80px',
+    lineHeight: 1.7,
+}
+
+const loadingStyle = {
+    maxWidth: 720,
+    margin: '0 auto',
+    padding: '56px 20px 80px',
+    color: '#6b7280',
+}
+
+const title = { fontSize: 28, marginBottom: 12 }
+const lead = { marginBottom: 28, color: '#374151' }
+
+const card = {
     border: '1px solid #e5e7eb',
     borderRadius: 16,
     padding: 20,
     background: '#ffffff',
 }
 
-const cardTitle: React.CSSProperties = {
-    margin: '0 0 16px',
-    fontSize: 20,
-}
+const cardTitle = { marginBottom: 16, fontSize: 20 }
+const dl = { margin: 0 }
 
-const dl: React.CSSProperties = {
-    margin: 0,
-}
-
-const row: React.CSSProperties = {
+const row = {
     display: 'flex',
     justifyContent: 'space-between',
     padding: '8px 0',
     borderBottom: '1px solid #f3f4f6',
 }
 
-const dt: React.CSSProperties = {
-    fontWeight: 600,
-    color: '#374151',
+const dt = { fontWeight: 600, color: '#374151' }
+const dd = { margin: 0, color: '#111827' }
+
+const warningBox = {
+    marginBottom: 20,
+    padding: '14px 16px',
+    borderRadius: 14,
+    background: '#fffbeb',
+    border: '1px solid #fde68a',
+    color: '#92400e',
+    fontWeight: 700,
 }
 
-const dd: React.CSSProperties = {
-    margin: 0,
-    color: '#111827',
+const payButton = {
+    display: 'block',
+    marginTop: 24,
+    padding: '12px 16px',
+    borderRadius: 10,
+    background: '#111827',
+    color: '#ffffff',
+    fontWeight: 700,
+    textAlign: 'center' as const,
+    textDecoration: 'none',
 }
 
-const dangerButton: React.CSSProperties = {
+const dangerButton = {
+    marginTop: 12,
     padding: '10px 14px',
     borderRadius: 10,
     border: '1px solid #fca5a5',
@@ -268,22 +381,8 @@ const dangerButton: React.CSSProperties = {
     cursor: 'not-allowed',
 }
 
-const backLink: React.CSSProperties = {
+const backLink = {
     textDecoration: 'none',
     color: '#374151',
     fontWeight: 600,
-}
-
-const payButton: React.CSSProperties = {
-    padding: '12px 16px',
-    borderRadius: 10,
-    border: 'none',
-    background: '#111827',
-    color: '#ffffff',
-    fontWeight: 700,
-    fontSize: 16,
-    cursor: 'pointer',
-    width: '100%',
-    textAlign: 'center',
-    textDecoration: 'none',
 }
