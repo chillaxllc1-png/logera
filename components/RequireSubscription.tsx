@@ -2,8 +2,8 @@
 
 import { ReactNode } from 'react'
 import Link from 'next/link'
-import { useAuth } from '@/lib/auth/AuthContext.tsx'
-import type { FeatureKey } from '@/lib/features.ts'
+import { useAuth } from '@/lib/auth/AuthContext'
+import type { FeatureKey } from '@/lib/features'
 
 function LockIcon() {
     return (

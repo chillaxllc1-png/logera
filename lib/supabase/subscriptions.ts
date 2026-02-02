@@ -1,5 +1,5 @@
-import { getSupabaseBrowserClient } from './client.ts'
-import type { FeatureKey, PlanKey } from '@/lib/features.ts'
+import { getSupabaseBrowserClient } from './client'
+import type { FeatureKey, PlanKey } from '@/lib/features'
 
 /**
  * UI / AuthContext 用の単一スナップショット

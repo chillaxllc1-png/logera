@@ -1,7 +1,7 @@
 'use client'
 
 import { ReactNode, useEffect } from 'react'
-import { useAuth } from '@/lib/auth/AuthContext.tsx'
+import { useAuth } from '@/lib/auth/AuthContext'
 import { useRouter } from 'next/navigation'
 
 /**

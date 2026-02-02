@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useAuth } from '@/lib/auth/AuthContext.tsx'
+import { useAuth } from '@/lib/auth/AuthContext'
 
 export default function Header() {
     const {

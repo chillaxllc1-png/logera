@@ -3,9 +3,9 @@
 
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { createOrUpdateSubscription } from '@/lib/supabase/subscriptions.ts'
-import { useAuth } from '@/lib/auth/AuthContext.tsx'
-import { getSupabaseBrowserClient } from '@/lib/supabase/client.ts'
+import { createOrUpdateSubscription } from '@/lib/supabase/subscriptions'
+import { useAuth } from '@/lib/auth/AuthContext'
+import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 
 export default function CheckoutClient() {
     const router = useRouter()

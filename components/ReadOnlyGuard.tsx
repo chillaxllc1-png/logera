@@ -2,7 +2,7 @@
 
 import React from 'react'
 import Link from 'next/link'
-import ButtonLink from '@/components/ui/ButtonLink.tsx'
+import ButtonLink from '@/components/ui/ButtonLink'
 
 type ReadOnlyGuardProps = {
     children: React.ReactNode
