@@ -42,6 +42,10 @@ export default function Pricing() {
                 </p>
             </div>
 
+            <p style={{ marginBottom: 16, color: '#6b7280', fontSize: 14 }}>
+                まずは Starter で全体を把握し、必要に応じて Growth / Pro に拡張する構成です。
+            </p>
+
             {/* プラン一覧 */}
             <div
                 style={{
@@ -69,6 +73,9 @@ export default function Pricing() {
                 {/* Growth */}
                 <div style={{ ...planCard, borderColor: '#111827' }}>
                     <h3 style={planTitle}>Growth</h3>
+                    <p style={{ fontSize: 13, color: '#065f46', fontWeight: 700 }}>
+                        最も選ばれているプラン
+                    </p>
                     <p style={planPrice}>月額 49,800円（税込）</p>
                     <p style={planDesc}>月間注文件数 上限 10,000件</p>
 

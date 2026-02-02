@@ -4,15 +4,20 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth/AuthContext'
 import { FEATURES } from '@/lib/features'
+import ButtonLink from '@/components/ui/ButtonLink'
+import { cancelScheduledDowngrade } from '@/lib/supabase/subscriptions'
+import { createOrUpdateSubscription } from '@/lib/supabase/subscriptions'
 
 export default function Billing() {
     const {
+        user,
         hasActiveSubscription,
         subscriptionPlan,
         subscriptionStatus,
         currentPeriodEnd,
         cancelAtPeriodEnd,
         isLoading,
+        refreshSubscription,
     } = useAuth()
 
     const [showCanceled, setShowCanceled] = useState(false)
@@ -28,16 +33,67 @@ export default function Billing() {
         }
     }, [])
 
+    const handleCancelDowngrade = async () => {
+        if (!user) return
+
+        const ok = window.confirm(
+            'ダウングレード予約を取り消しますか？\n現在のプランは継続されます。'
+        )
+        if (!ok) return
+
+        try {
+            await cancelScheduledDowngrade(user.id)
+            await refreshSubscription()
+        } catch (e) {
+            console.error(e)
+            alert('処理に失敗しました。時間をおいて再度お試しください。')
+        }
+    }
+
     // 読み込み中（真っ白禁止）
     if (isLoading || hasActiveSubscription === null) {
         return <section style={loadingStyle}>読み込み中…</section>
     }
 
+    // =========================
+    // 現在プランとダウングレード先
+    // =========================
     const currentPlan = subscriptionPlan ?? 'starter'
+
+    const downgradeTargetPlan =
+        currentPlan === 'pro'
+            ? 'growth'
+            : currentPlan === 'growth'
+                ? 'starter'
+                : null
 
     const periodEndLabel = currentPeriodEnd
         ? new Date(currentPeriodEnd).toLocaleDateString('ja-JP')
         : null
+
+    // =========================
+    // ダウングレード予約（次回更新日から）
+    // =========================
+    const handleScheduleDowngrade = async () => {
+        if (!user || !downgradeTargetPlan) return
+
+        const ok = window.confirm(
+            `次回更新日から ${downgradeTargetPlan.toUpperCase()} プランに変更します。\n\n現在のプランは有効期限まで利用できます。`
+        )
+        if (!ok) return
+
+        try {
+            await createOrUpdateSubscription({
+                userId: user.id,
+                planId: downgradeTargetPlan, // 将来 next_plan_id 用。思想的に渡す
+                mode: 'next_period',
+            })
+            await refreshSubscription()
+        } catch (e) {
+            console.error(e)
+            alert('処理に失敗しました。時間をおいて再度お試しください。')
+        }
+    }
 
     return (
         <section style={container}>
@@ -153,9 +209,11 @@ export default function Billing() {
 
                     <Row label="月額料金">
                         {hasActiveSubscription
-                            ? currentPlan === 'pro'
-                                ? '49,800円（税込）'
-                                : '19,800円（税込）'
+                            ? currentPlan === 'starter'
+                                ? '19,800円（税込）'
+                                : currentPlan === 'growth'
+                                    ? '49,800円（税込）'
+                                    : '99,800円（税込）'
                             : '—'}
                     </Row>
 
@@ -179,13 +237,61 @@ export default function Billing() {
                                 color: '#92400e',
                                 fontSize: 14,
                                 fontWeight: 700,
+                                lineHeight: 1.6,
                             }}
                         >
-                            解約予約中：
+                            ダウングレード予約中：
+                            <br />
+                            現在のプランは{' '}
                             {new Date(currentPeriodEnd).toLocaleDateString('ja-JP')}
-                            までご利用いただけます
+                            までご利用いただけます。
+                            <br />
+                            次回更新日から下位プランが適用されます。
                         </div>
                     )}
+
+                {hasActiveSubscription === true && cancelAtPeriodEnd && (
+                    <div
+                        style={{
+                            marginTop: 8,
+                            padding: '8px 12px',
+                            borderRadius: 8,
+                            background: '#f9fafb',
+                            border: '1px solid #e5e7eb',
+                            fontSize: 13,
+                            color: '#374151',
+                            fontWeight: 600,
+                        }}
+                    >
+                        次回更新日からのプラン：
+                        <strong style={{ marginLeft: 4 }}>
+                            {currentPlan === 'pro'
+                                ? 'Growth'
+                                : currentPlan === 'growth'
+                                    ? 'Starter'
+                                    : '—'}
+                        </strong>
+                    </div>
+                )}
+
+                {hasActiveSubscription === true && cancelAtPeriodEnd && (
+                    <button
+                        onClick={handleCancelDowngrade}
+                        style={{
+                            marginTop: 10,
+                            padding: '8px 12px',
+                            borderRadius: 8,
+                            border: '1px solid #d1d5db',
+                            background: '#ffffff',
+                            color: '#374151',
+                            fontWeight: 700,
+                            fontSize: 13,
+                            cursor: 'pointer',
+                        }}
+                    >
+                        ダウングレード予約を取り消す
+                    </button>
+                )}
             </div>
 
             {/* =========================
@@ -193,6 +299,12 @@ export default function Billing() {
             ========================= */}
             <div style={{ ...card, marginTop: 24 }}>
                 <h2 style={cardTitle}>プラン別 機能一覧</h2>
+
+                <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 12 }}>
+                    Starter：状況把握（まずはここから） ／{' '}
+                    Growth：判断効率化（最も選ばれています） ／{' '}
+                    Pro：高度分析・リスク予測（リスク管理を重視する方向け）
+                </p>
 
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                     {Object.values(FEATURES).map((feature) => {
@@ -232,7 +344,25 @@ export default function Billing() {
                                             : '#92400e',
                                     }}
                                 >
-                                    {enabled ? '✔ 利用可能' : '🔒 上位プラン'}
+                                    {enabled ? (
+                                        <span style={{ color: '#065f46' }}>✔ 利用可能</span>
+                                    ) : (
+                                        <span
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 4,
+                                                color: '#92400e',
+                                                whiteSpace: 'nowrap',
+                                                fontWeight: 700,
+                                                fontSize: 12,
+                                                opacity: 0.9,
+                                            }}
+                                        >
+                                            <LockIcon size={14} />
+                                            上位プラン
+                                        </span>
+                                    )}
                                 </div>
                             </li>
                         )
@@ -244,23 +374,67 @@ export default function Billing() {
                 CTA
             ========================= */}
             {hasActiveSubscription === false && (
-                <Link href="/checkout" style={payButton}>
-                    Starter プランを契約する
-                </Link>
+                <div style={{ marginTop: 24 }}>
+                    <ButtonLink href="/checkout" fullWidth>
+                        プランを利用開始
+                    </ButtonLink>
+                </div>
             )}
 
             {hasActiveSubscription === true &&
                 subscriptionPlan === 'starter' && (
-                    <Link
-                        href="/checkout"
-                        style={{
-                            ...payButton,
-                            background: '#4f46e5',
-                            marginTop: 12,
-                        }}
+                    <ButtonLink
+                        href="/checkout?upgrade=growth"
+                        variant="primary"
+                        fullWidth
+                    >
+                        Growth プランへアップグレード
+                    </ButtonLink>
+                )}
+
+            {hasActiveSubscription === true &&
+                subscriptionPlan === 'growth' && (
+                    <ButtonLink
+                        href="/checkout?upgrade=pro"
+                        variant="primary"
+                        fullWidth
                     >
                         Pro プランへアップグレード
-                    </Link>
+                    </ButtonLink>
+                )}
+
+            {hasActiveSubscription === true &&
+                !cancelAtPeriodEnd &&
+                downgradeTargetPlan && (
+                    <div style={{ marginTop: 12 }}>
+                        <button
+                            onClick={handleScheduleDowngrade}
+                            style={{
+                                width: '100%',
+                                padding: '10px 14px',
+                                borderRadius: 10,
+                                border: '1px solid #e5e7eb',
+                                background: '#f9fafb',
+                                color: '#374151',
+                                fontWeight: 700,
+                                fontSize: 14,
+                                cursor: 'pointer',
+                            }}
+                        >
+                            次回更新日から {downgradeTargetPlan.toUpperCase()} プランに変更
+                        </button>
+
+                        <p
+                            style={{
+                                marginTop: 6,
+                                fontSize: 12,
+                                color: '#6b7280',
+                                lineHeight: 1.5,
+                            }}
+                        >
+                            ※ 現在のプランは有効期限までご利用いただけます
+                        </p>
+                    </div>
                 )}
 
             {/* =========================
@@ -285,6 +459,27 @@ export default function Billing() {
                 </Link>
             </div>
         </section>
+    )
+}
+
+function LockIcon({ size = 14 }: { size?: number }) {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width={size}
+            height={size}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ marginRight: 6 }}
+        >
+            <circle cx="12" cy="16" r="1" />
+            <rect x="3" y="10" width="18" height="12" rx="2" />
+            <path d="M7 10V7a5 5 0 0 1 10 0v3" />
+        </svg>
     )
 }
 
@@ -356,18 +551,6 @@ const warningBox = {
     border: '1px solid #fde68a',
     color: '#92400e',
     fontWeight: 700,
-}
-
-const payButton = {
-    display: 'block',
-    marginTop: 24,
-    padding: '12px 16px',
-    borderRadius: 10,
-    background: '#111827',
-    color: '#ffffff',
-    fontWeight: 700,
-    textAlign: 'center' as const,
-    textDecoration: 'none',
 }
 
 const dangerButton = {

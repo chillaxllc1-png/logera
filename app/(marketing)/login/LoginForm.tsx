@@ -109,7 +109,16 @@ export default function LoginForm() {
             <div style={{ marginTop: 28 }}>
                 <p style={{ margin: 0, fontSize: 14 }}>
                     アカウントをお持ちでない場合は
-                    <Link href="/signup"> 新規登録</Link>
+                    <Link
+                        href="/signup"
+                        style={{
+                            color: '#4f46e5',
+                            fontWeight: 700,
+                            textDecoration: 'underline',
+                        }}
+                    >
+                        新規登録
+                    </Link>
                     してください。
                 </p>
             </div>

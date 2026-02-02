@@ -2,6 +2,7 @@
 
 import React from 'react'
 import Link from 'next/link'
+import ButtonLink from '@/components/ui/ButtonLink'
 
 type ReadOnlyGuardProps = {
     children: React.ReactNode
@@ -56,7 +57,7 @@ export default function ReadOnlyGuard({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: 'rgba(255, 251, 235, 0.95)',
+                    background: 'rgba(255, 251, 235, 0.92)',
                     border: '1px solid #fde68a',
                     borderRadius: 16,
                     padding: 20,
@@ -86,21 +87,9 @@ export default function ReadOnlyGuard({
                         </p>
                     )}
 
-                    <Link
-                        href="/billing"
-                        style={{
-                            display: 'inline-block',
-                            padding: '8px 18px',
-                            borderRadius: 999,
-                            background: '#111827',
-                            color: '#ffffff',
-                            fontWeight: 700,
-                            fontSize: 14,
-                            textDecoration: 'none',
-                        }}
-                    >
+                    <ButtonLink href="/billing">
                         請求・契約を確認する
-                    </Link>
+                    </ButtonLink>
                 </div>
             </div>
         </div>

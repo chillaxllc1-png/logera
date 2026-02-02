@@ -1,14 +1,20 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { createSubscription } from '@/lib/supabase/subscriptions'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { createOrUpdateSubscription } from '@/lib/supabase/subscriptions'
 import { useAuth } from '@/lib/auth/AuthContext'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 
 export default function Checkout() {
     const router = useRouter()
     const { user, refreshSubscription } = useAuth()
+
+    const searchParams = useSearchParams()
+    const upgradePlan = searchParams.get('upgrade') as
+        | 'growth'
+        | 'pro'
+        | null
 
     const [isCompleted, setIsCompleted] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
@@ -27,11 +33,13 @@ export default function Checkout() {
 
             const supabase = getSupabaseBrowserClient()
 
-            // ✅ Starter プランの planId を取得
+            // ✅ 対象プラン（新規 or アップグレード）
+            const targetPlanKey = upgradePlan ?? 'starter'
+
             const { data: plan, error: planError } = await supabase
                 .from('plans')
-                .select('id')
-                .eq('key', 'starter')
+                .select('id, name, price_yen')
+                .eq('key', targetPlanKey)
                 .single()
 
             if (planError || !plan) {
@@ -39,7 +47,7 @@ export default function Checkout() {
             }
 
             // ✅ UUID を渡す（ここが修正点）
-            await createSubscription({
+            await createOrUpdateSubscription({
                 userId: user.id,
                 planId: plan.id,
             })
@@ -100,7 +108,9 @@ export default function Checkout() {
                             fontWeight: 700,
                         }}
                     >
-                        Starter プランが有効化されました
+                        {upgradePlan
+                            ? 'プラン変更が完了しました'
+                            : 'Starter プランが有効化されました'}
                     </p>
 
                     <p style={{ margin: 0, color: '#166534' }}>
@@ -110,11 +120,17 @@ export default function Checkout() {
             ) : (
                 <>
                     <h1 style={{ margin: '0 0 12px', fontSize: 28 }}>
-                        お支払い手続き
+                        {upgradePlan ? 'プラン変更の確認' : 'お支払い手続き'}
                     </h1>
 
                     <p style={{ margin: '0 0 24px', color: '#374151' }}>
-                        以下の内容でお支払いを行います。決済完了後、すぐに管理画面をご利用いただけます。
+                        {upgradePlan
+                            ? '現在のプランから上位プランへ変更します。確定後、すぐにすべての機能が利用可能になります。'
+                            : '以下の内容でお支払いを行います。決済完了後、すぐに管理画面をご利用いただけます。'}
+                    </p>
+
+                    <p style={{ margin: '0 0 16px', fontSize: 13, color: '#6b7280' }}>
+                        ※ プランは後からいつでも変更・解約できます。
                     </p>
 
                     <div
@@ -129,7 +145,11 @@ export default function Checkout() {
                         <dl style={{ margin: 0 }}>
                             <div style={row}>
                                 <dt style={dt}>プラン</dt>
-                                <dd style={dd}>Starter</dd>
+                                <dd style={dd}>
+                                    {upgradePlan
+                                        ? `${upgradePlan.toUpperCase()}（アップグレード）`
+                                        : 'Starter（後からいつでも上位プランへ変更できます）'}
+                                </dd>
                             </div>
                             <div style={row}>
                                 <dt style={dt}>月額料金</dt>
@@ -141,6 +161,21 @@ export default function Checkout() {
                             </div>
                         </dl>
                     </div>
+
+                    {upgradePlan && (
+                        <p
+                            style={{
+                                margin: '0 0 16px',
+                                fontSize: 13,
+                                color: '#065f46',
+                                fontWeight: 600,
+                            }}
+                        >
+                            ※ アップグレード後、追加料金は発生しません。
+                            <br />
+                            次回更新日から新プランの料金が適用されます。
+                        </p>
+                    )}
 
                     {error && (
                         <div
@@ -176,8 +211,10 @@ export default function Checkout() {
                         {isSaving
                             ? '処理中…'
                             : error
-                                ? 'もう一度支払う'
-                                : 'クレジットカードで支払う（pay.jp ダミー）'}
+                                ? 'もう一度実行する'
+                                : upgradePlan
+                                    ? '内容を確認してアップグレード'
+                                    : '内容を確認して支払う'}
                     </button>
 
                     <button

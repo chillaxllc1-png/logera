@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth/AuthContext'
 import RequireSubscription from '@/components/RequireSubscription'
 import { FEATURE_LIST } from '@/lib/features'
 import ReadOnlyGuard from '@/components/ReadOnlyGuard'
+import ButtonLink from '@/components/ui/ButtonLink'
 
 function PartyPopperIcon() {
     return (
@@ -162,7 +163,9 @@ export default function Dashboard() {
                                 <h2>{feature.name}</h2>
                                 <p>{feature.description}</p>
 
-                                <button style={primaryButton}>利用する</button>
+                                <ButtonLink onClick={() => { }}>
+                                    利用する
+                                </ButtonLink>
                             </div>
                         </ReadOnlyGuard>
                     </RequireSubscription>
@@ -172,7 +175,9 @@ export default function Dashboard() {
                 <div style={card}>
                     <h2>請求・契約</h2>
                     <p>プラン確認・変更・解約はこちら。</p>
-                    <Link href="/billing">請求・契約を開く</Link>
+                    <ButtonLink href="/billing">
+                        請求・契約を確認する
+                    </ButtonLink>
                 </div>
             </div>
         </section>

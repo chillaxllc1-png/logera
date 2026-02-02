@@ -15,7 +15,7 @@ export type FeatureKey =
 /* =========================
    プラン種別
 ========================= */
-export type PlanKey = 'starter' | 'pro'
+export type PlanKey = 'starter' | 'growth' | 'pro'
 
 /* =========================
    Feature 定義
@@ -35,20 +35,20 @@ export const FEATURES: Record<FeatureKey, FeatureDefinition> = {
         key: 'identity_match',
         name: '一致情報チェック',
         description: '住所・IP・端末情報などの一致情報を確認できます。',
-        availablePlans: ['pro'],
+        availablePlans: ['growth', 'pro'],
     },
 
     order_refund_history: {
         key: 'order_refund_history',
         name: '注文・返金履歴',
         description: '注文および返金対応の履歴を時系列で確認できます。',
-        availablePlans: ['starter', 'pro'],
+        availablePlans: ['starter', 'growth', 'pro'],
     },
 
     risk_score: {
         key: 'risk_score',
         name: 'リスクスコア',
-        description: '行動パターンから算出した参考スコアを確認できます。',
+        description: '行動パターンから算出した参考スコアを確認できます。（今後、自動判定・優先度付け機能を追加予定）',
         availablePlans: ['pro'],
     },
 
@@ -56,7 +56,7 @@ export const FEATURES: Record<FeatureKey, FeatureDefinition> = {
         key: 'trend_analysis',
         name: '傾向分析',
         description: '返品率や返金傾向などを参考情報として確認できます。',
-        availablePlans: ['starter', 'pro'],
+        availablePlans: ['starter', 'growth', 'pro'],
     },
 }
 
