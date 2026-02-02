@@ -1,8 +1,8 @@
 'use client'
 
 import React from 'react'
-import { useAuth } from '@/lib/auth/AuthContext'
-import type { FeatureKey } from '@/lib/features'
+import { useAuth } from '@/lib/auth/AuthContext.tsx'
+import type { FeatureKey } from '@/lib/features.ts'
 
 type RequireFeatureProps = {
     feature: FeatureKey

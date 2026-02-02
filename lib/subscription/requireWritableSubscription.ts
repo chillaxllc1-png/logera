@@ -1,4 +1,4 @@
-import { fetchActiveSubscriptionSnapshotByUserId } from '@/lib/supabase/subscriptions'
+import { fetchActiveSubscriptionSnapshotByUserId } from '@/lib/supabase/subscriptions.ts'
 
 export async function requireWritableSubscription(userId: string) {
     const snap = await fetchActiveSubscriptionSnapshotByUserId(userId)

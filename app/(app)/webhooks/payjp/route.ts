@@ -1,13 +1,19 @@
+export const runtime = 'nodejs'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 /**
  * ✅ Webhook 用 admin client（RLS 無効）
  */
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+if (!supabaseUrl || !serviceKey) {
+    throw new Error('Missing Supabase env vars')
+}
+
+const supabaseAdmin = createClient(supabaseUrl, serviceKey)
 
 export async function POST(req: NextRequest) {
     const body = await req.json()
@@ -21,7 +27,7 @@ export async function POST(req: NextRequest) {
     if (!eventType || !data) {
         return NextResponse.json(
             { error: 'invalid payload' },
-            { status: 400 }
+            { status: 400 } as ResponseInit
         )
     }
 
