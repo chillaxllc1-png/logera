@@ -1,6 +1,6 @@
 // app/checkout/page.tsx
 import { Suspense } from 'react'
-import CheckoutClient from './CheckoutClient.tsx'
+import CheckoutClient from './CheckoutClient'
 
 export default function CheckoutPage() {
   return (

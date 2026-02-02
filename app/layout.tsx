@@ -1,8 +1,8 @@
 import './globals.css'
-import Header from '@/components/Header.tsx'
-import Footer from '@/components/Footer.tsx'
-import { AuthProvider } from '@/lib/auth/AuthContext.tsx'
-import { baseMetadata } from '@/lib/metadata.ts'
+import Header from '@/components/Header'
+import Footer from '@/components/Footer'
+import { AuthProvider } from '@/lib/auth/AuthContext'
+import { baseMetadata } from '@/lib/metadata'
 
 export const metadata = baseMetadata
 

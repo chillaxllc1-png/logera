@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
-import LoginForm from './LoginForm.tsx'
+import LoginForm from './LoginForm'
 
 export const metadata = {
     title: 'ログイン｜DatLynq',
