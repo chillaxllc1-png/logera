@@ -1,0 +1,37 @@
+// components/icons/SearchIcon.tsx
+import * as React from 'react'
+
+type Props = {
+  size?: number
+  color?: string
+  className?: string
+  strokeWidth?: number
+  'aria-hidden'?: boolean
+}
+
+export default function SearchIcon({
+  size = 18,
+  color = 'currentColor',
+  className,
+  strokeWidth = 2,
+  'aria-hidden': ariaHidden = true,
+}: Props) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden={ariaHidden}
+    >
+      <path d="m21 21-4.34-4.34" />
+      <circle cx="11" cy="11" r="8" />
+    </svg>
+  )
+}

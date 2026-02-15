@@ -12,7 +12,44 @@ export default function Contact() {
                 lineHeight: 1.7,
             }}
         >
-            <h1 style={{ margin: '0 0 20px' }}>お問い合わせ</h1>
+            <h1 style={{ margin: '0 0 16px', fontSize: 28 }}>
+                お問い合わせ・Enterpriseご相談
+            </h1>
+
+            <p style={{ margin: '0 0 24px', color: '#374151', lineHeight: 1.6 }}>
+                DatLynqに関するご質問に加え、
+                Enterpriseプランのご相談もこちらから承っております。
+            </p>
+
+            <div
+                style={{
+                    marginBottom: 28,
+                    padding: 20,
+                    borderRadius: 16,
+                    background: '#f9fafb',
+                    border: '1px solid #e5e7eb',
+                }}
+            >
+                <h2 style={{ margin: '0 0 12px', fontSize: 20 }}>
+                    Enterpriseプランのご相談
+                </h2>
+
+                <p style={{ margin: '0 0 12px', color: '#374151', lineHeight: 1.6 }}>
+                    以下のような運営体制をご検討の場合、
+                    Enterpriseプランをご案内しております。
+                </p>
+
+                <ul style={{ margin: '0 0 12px', paddingLeft: 18, color: '#374151' }}>
+                    <li>月間取引量が増加傾向にある</li>
+                    <li>返金や不正対策の精度をさらに高めたい</li>
+                    <li>判断ミスによる損失リスクを最小化したい</li>
+                    <li>専任サポートを希望している</li>
+                </ul>
+
+                <p style={{ margin: 0, fontSize: 14, color: '#6b7280' }}>
+                    費用感や導入可否のご相談だけでも問題ありません。
+                </p>
+            </div>
 
             <p style={{ margin: '0 0 24px', color: '#374151' }}>
                 本サービスに関するご質問やご不明点がございましたら、
@@ -34,7 +71,7 @@ export default function Contact() {
 
                 <div style={row}>
                     <p style={label}>メールアドレス</p>
-                    <p style={value}>chillaxllc1@gmail.com</p>
+                    <p style={value}>info@datlynq.com</p>
                 </div>
 
                 <div style={{ marginTop: 12 }}>

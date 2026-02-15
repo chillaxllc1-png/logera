@@ -2,9 +2,16 @@
 
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth/AuthContext'
+import type { PlanKey } from '@/lib/features'
+import { formatPlanLabel } from '@/lib/planLabel'
+import SettingsIcon from '@/components/ui/SettingsIcon'
+import BellIcon from '@/components/ui/BellIcon'
+import { useEffect, useState } from 'react'
+import { hasUnreadAlerts } from '@/lib/alerts/hasUnreadAlerts'
 
 export default function Header() {
     const {
+        user,
         isLoggedIn,
         hasActiveSubscription,
         subscriptionPlan,
@@ -12,34 +19,121 @@ export default function Header() {
         isLoading,
     } = useAuth()
 
+    // （state 定義）
+    const [hasUnread, setHasUnread] = useState(false)
+
+    useEffect(() => {
+        if (!isLoggedIn || !user?.id) {
+            setHasUnread(false)
+            return
+        }
+
+        let alive = true
+
+        const check = async () => {
+            const unread = await hasUnreadAlerts(user.id)
+            if (alive) setHasUnread(unread)
+        }
+
+        check()
+
+        return () => {
+            alive = false
+        }
+    }, [isLoggedIn, user?.id])
+
+    useEffect(() => {
+        if (!user?.id) return
+
+        const onRead = () => {
+            setHasUnread(false)
+        }
+
+        window.addEventListener('notifications:read', onRead)
+
+        return () => {
+            window.removeEventListener('notifications:read', onRead)
+        }
+    }, [user?.id])
+
     // 初期同期中は描画しない（チラ見防止）
     if (isLoading || hasActiveSubscription === null) {
         return null
     }
 
     return (
-        <header
-            style={{
-                borderBottom: '1px solid #e5e7eb',
-                background: '#ffffff',
-            }}
-        >
-            <div style={container}>
-                {/* ロゴ */}
-                <Link
-                    href={isLoggedIn ? '/dashboard' : '/'}
-                    style={logo}
-                >
-                    DatLynq
-                </Link>
+        <header style={header}>
+            <div style={headerInner}>
+                {/* 上段 */}
+                <div style={topRow}>
+                    <Link
+                        href={isLoggedIn ? '/dashboard' : '/'}
+                        style={logo}
+                    >
+                        DatLynq
+                    </Link>
 
-                {/* ナビ */}
+                    {isLoggedIn && hasActiveSubscription && (
+                        <span style={planBadge}>
+                            {formatPlanLabel(
+                                (subscriptionPlan as PlanKey | null) ?? 'starter'
+                            )} プラン利用中
+                        </span>
+                    )}
+                </div>
+
+                {/* 下段 */}
                 {isLoggedIn ? (
-                    <LoggedInNav
-                        hasActiveSubscription={hasActiveSubscription}
-                        subscriptionPlan={subscriptionPlan}
-                        onLogout={logout}
-                    />
+                    <div style={bottomRow}>
+                        <Link href="/dashboard" style={navLink}>
+                            管理画面
+                        </Link>
+
+                        <Link href="/billing" style={navLink}>
+                            請求・契約
+                        </Link>
+
+                        {/* 通知 */}
+                        <Link
+                            href="/notifications"
+                            style={{ ...iconButton, position: 'relative' }}
+                            aria-label="通知"
+                        >
+                            <BellIcon size={16} />
+
+                            {hasUnread && (
+                                <span
+                                    style={{
+                                        position: 'absolute',
+                                        top: 2,
+                                        right: 2,
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: '50%',
+                                        background: '#dc2626', // 赤
+                                        boxShadow: '0 0 0 2px #ffffff', // 背景と分離
+                                    }}
+                                />
+                            )}
+                        </Link>
+
+                        {/* 設定（デフォルトタブ） */}
+                        <Link
+                            href="/settings"
+                            style={iconButton}
+                            aria-label="設定"
+                        >
+                            <SettingsIcon size={16} />
+                        </Link>
+
+                        <button
+                            type="button"
+                            onClick={logout}
+                            style={logoutButton}
+                        >
+                            ログアウト
+                        </button>
+                    </div>
                 ) : (
                     <GuestNav />
                 )}
@@ -81,7 +175,8 @@ function LoggedInNav({
     subscriptionPlan: string | null
     onLogout: () => void
 }) {
-    const planLabel = subscriptionPlan ?? 'Starter'
+    const currentPlan: PlanKey =
+        (subscriptionPlan as PlanKey | null) ?? 'starter'
 
     return (
         <nav style={nav}>
@@ -89,7 +184,7 @@ function LoggedInNav({
             {hasActiveSubscription === true && (
                 <>
                     <Link href="/billing" style={{ ...planBadge, ...noWrap }}>
-                        {planLabel} プラン利用中
+                        {formatPlanLabel(currentPlan)} プラン利用中
                     </Link>
 
                     <Link href="/dashboard" style={{ ...navLink, ...noWrap }}>
@@ -207,4 +302,40 @@ const logoutButton: React.CSSProperties = {
 const noWrap: React.CSSProperties = {
     whiteSpace: 'nowrap',
     wordBreak: 'keep-all',
+}
+
+const header: React.CSSProperties = {
+    borderBottom: '1px solid #e5e7eb',
+    background: '#ffffff',
+}
+
+const headerInner: React.CSSProperties = {
+    maxWidth: 1100,
+    margin: '0 auto',
+}
+
+const topRow: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '14px 20px',
+}
+
+const bottomRow: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    padding: '8px 20px 12px',
+    borderTop: '1px solid #f3f4f6',
+}
+
+const iconButton: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    color: '#374151',
+    textDecoration: 'none',
 }

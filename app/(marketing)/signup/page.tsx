@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
@@ -24,14 +24,11 @@ export default function Signup() {
 
         const supabase = getSupabaseBrowserClient()
 
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
             email,
             password,
             options: {
-                data: {
-                    company,
-                    name,
-                },
+                data: { company, name },
             },
         })
 
@@ -42,11 +39,14 @@ export default function Signup() {
             return
         }
 
-        /**
-         * ✅ この時点で session は作られている
-         * → login 不要
-         */
-        router.replace('/billing')
+        // ✅ session がある（＝メール確認なし等）→ そのまま Billing へ
+        if (data?.session) {
+            router.replace('/billing')
+            return
+        }
+
+        // ✅ session が無い（＝メール確認が必要な設定の可能性）→ 案内ページへ
+        router.replace('/login?from=signup')
     }
 
     return (
@@ -62,9 +62,10 @@ export default function Signup() {
             </h1>
 
             <p style={{ margin: '0 0 28px', color: '#374151', lineHeight: 1.6 }}>
-                会社情報と担当者情報を入力し、DatLynq のアカウントを作成します。
+                DatLynq を利用するためのアカウントを作成します。
                 <br />
-                登録後、料金プランの確認とお支払い手続きに進みます。
+                登録後、プラン内容を確認し、
+                利用開始のためのお支払い手続きに進みます。
             </p>
 
             <form onSubmit={handleSubmit}>
@@ -75,6 +76,7 @@ export default function Signup() {
                         value={company}
                         onChange={(e) => setCompany(e.target.value)}
                         required
+                        disabled={loading}
                     />
                 </div>
 
@@ -85,6 +87,7 @@ export default function Signup() {
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         required
+                        disabled={loading}
                     />
                 </div>
 
@@ -118,9 +121,7 @@ export default function Signup() {
                 )}
 
                 <button type="submit" style={primaryButton} disabled={loading}>
-                    {loading
-                        ? '登録中…'
-                        : 'アカウントを作成して支払いへ進む'}
+                    {loading ? '登録中…' : 'アカウントを作成して利用開始へ進む'}
                 </button>
             </form>
 

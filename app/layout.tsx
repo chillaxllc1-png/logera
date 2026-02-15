@@ -3,6 +3,7 @@ import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import { AuthProvider } from '@/lib/auth/AuthContext'
 import { baseMetadata } from '@/lib/metadata'
+import Script from 'next/script'
 
 export const metadata = baseMetadata
 
@@ -20,9 +21,14 @@ export default function RootLayout({
           color: '#111827',
         }}
       >
+        {/* 🔥 ここが重要 */}
+        <Script
+          src="https://js.pay.jp/v2/pay.js"
+          strategy="beforeInteractive"
+        />
+
         <AuthProvider>
           <Header />
-
           <main
             style={{
               maxWidth: 1100,
@@ -32,7 +38,6 @@ export default function RootLayout({
           >
             {children}
           </main>
-
           <Footer />
         </AuthProvider>
       </body>

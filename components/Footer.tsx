@@ -23,6 +23,7 @@ export default function Footer() {
             >
                 {/* 法務・案内リンク */}
                 <nav
+                className="footer-nav"
                     style={{
                         display: 'flex',
                         flexWrap: 'wrap',
@@ -30,6 +31,7 @@ export default function Footer() {
                         fontWeight: 600,
                     }}
                 >
+                    <Link href="/pricing">料金プラン</Link>
                     <Link href="/law">特定商取引法に基づく表記</Link>
                     <Link href="/terms">利用規約</Link>
                     <Link href="/privacy">プライバシーポリシー</Link>

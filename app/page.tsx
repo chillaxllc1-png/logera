@@ -32,17 +32,12 @@ export default function Page() {
             letterSpacing: 0.2,
           }}
         >
-          法人向け業務支援SaaS
+          高額デジタル販売・Webガチャ運営向け 分析支援SaaS
         </p>
 
-        <h1
-          style={{
-            margin: '10px 0 8px',
-            fontSize: 34,
-            lineHeight: 1.2,
-          }}
-        >
-          DatLynq（データリンク）
+        <h1 className="brand-title">
+          <span className="brand-en">DatLynq</span>
+          <span className="brand-ja">データリンク</span>
         </h1>
 
         <p
@@ -52,8 +47,9 @@ export default function Page() {
             color: '#111827',
           }}
         >
-          注文・返金対応に関する履歴を整理・可視化し、
-          担当者が判断するための参考情報を提供します。
+          Webガチャ・デジタルコンテンツ販売における
+          <strong>注文・返金・決済履歴</strong>を横断的に整理し、
+          運営判断に必要な「変化の兆し」を可視化します。
         </p>
 
         <div
@@ -119,15 +115,16 @@ export default function Page() {
             color: '#6b7280',
           }}
         >
-          ※ 本サービスは、不正の有無や特定の意図を判定・断定するものではありません。
-          表示内容は観測された履歴や比較情報に基づく参考情報です。
+          ※ 本サービスは、不正行為の検知・断定を行うものではありません。
+          あくまで過去データとの比較や傾向分析を通じて、
+          運営者の判断を補助するための情報を提供します。
         </p>
       </div>
 
       {/* 課題 → 使いどころ */}
       <div style={{ marginTop: 28 }}>
         <h2 style={{ margin: '0 0 10px', fontSize: 22 }}>
-          このような業務で利用されています
+          このような運営シーンで利用されています
         </h2>
 
         <div
@@ -138,23 +135,26 @@ export default function Page() {
           }}
         >
           <div style={cardStyle}>
-            <p style={cardTitle}>対応履歴の確認</p>
+            <p style={cardTitle}>高額決済が急増した日の確認</p>
             <p style={cardBody}>
-              返金依頼が増えた月に、過去の対応履歴をまとめて確認したい場合。
+              Webガチャや限定販売で決済件数が急増した際に、
+              過去の傾向と比較して状況を把握したい場合。
             </p>
           </div>
 
           <div style={cardStyle}>
-            <p style={cardTitle}>顧客単位の時系列</p>
+            <p style={cardTitle}>ユーザー単位の履歴把握</p>
             <p style={cardBody}>
-              同一顧客の注文・返金履歴を、時系列で一覧したい場合。
+              同一ユーザーによる連続購入・返金履歴を
+              時系列でまとめて確認したい場合。
             </p>
           </div>
 
           <div style={cardStyle}>
-            <p style={cardTitle}>傾向の把握</p>
+            <p style={cardTitle}>日次・期間比較による傾向分析</p>
             <p style={cardBody}>
-              直近の対応状況が、過去と比べてどのような傾向にあるかを確認したい場合。
+              昨日・先週・先月と比べて、
+              決済や返金の動きに変化が出ていないかを確認したい場合。
             </p>
           </div>
         </div>
@@ -174,9 +174,9 @@ export default function Page() {
             できること
           </h2>
           <ul style={{ margin: 0, paddingLeft: 18 }}>
-            <li>注文・返金履歴の整理</li>
-            <li>顧客単位の履歴の可視化</li>
-            <li>「通常と異なる傾向（参考）」の要因表示（根拠付き）</li>
+            <li>注文・返金・決済履歴の一元整理</li>
+            <li>ユーザー単位・日次単位での傾向可視化</li>
+            <li>「通常と異なる変化」の参考指標提示</li>
           </ul>
         </div>
 
@@ -185,17 +185,17 @@ export default function Page() {
             できないこと
           </h2>
           <ul style={{ margin: 0, paddingLeft: 18 }}>
-            <li>不正の判定・断定</li>
-            <li>出荷停止や返金可否の自動判断</li>
+            <li>不正行為の自動検知・断定</li>
+            <li>返金・停止などの自動実行</li>
           </ul>
         </div>
       </div>
 
-      {/* 解約明示（審査・信頼） */}
+      {/* 解約明示 */}
       <div style={{ marginTop: 26 }}>
         <p style={{ margin: 0, color: '#111827' }}>
-          ご契約中は、管理画面からいつでも解約手続きを行うことができます
-          （解約後の扱いは「解約方法」ページをご参照ください）。
+          ご契約中は、管理画面からいつでも解約手続きを行うことができます。
+          長期契約や強制更新はありません。
         </p>
       </div>
 
@@ -213,7 +213,7 @@ export default function Page() {
         }}
       >
         <p style={{ margin: 0, color: '#374151' }}>
-          料金・契約条件を確認してから始められます。
+          運営規模に応じた料金プランをご用意しています。
         </p>
 
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>

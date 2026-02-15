@@ -1,7 +1,7 @@
 // app/checkout/CheckoutClient.tsx
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createOrUpdateSubscription } from '@/lib/supabase/subscriptions'
 import { useAuth } from '@/lib/auth/AuthContext'
@@ -17,9 +17,38 @@ export default function CheckoutClient() {
         | 'pro'
         | null
 
+    const PLAN_PRICES: Record<'starter' | 'growth' | 'pro', string> = {
+        starter: '29,800円（税込）',
+        growth: '69,800円（税込）',
+        pro: '149,800円（税込）',
+    }
+
+    const selectedPlan: 'starter' | 'growth' | 'pro' =
+        upgradePlan ?? 'starter'
+    const selectedPrice = PLAN_PRICES[selectedPlan]
+
     const [isCompleted, setIsCompleted] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
     const [error, setError] = useState<string | null>(null)
+
+    const [isRestricted, setIsRestricted] = useState(false)
+
+    useEffect(() => {
+        if (!user) return
+
+        const checkRisk = async () => {
+            const supabase = getSupabaseBrowserClient()
+            const { data } = await supabase
+                .from('risk_controls')
+                .select('status')
+                .eq('user_id', user.id)
+                .maybeSingle()
+
+            setIsRestricted(data?.status === 'restricted')
+        }
+
+        checkRisk()
+    }, [user])
 
     const handlePayment = async () => {
         setError(null)
@@ -32,22 +61,11 @@ export default function CheckoutClient() {
         try {
             setIsSaving(true)
 
-            const supabase = getSupabaseBrowserClient()
             const targetPlanKey = upgradePlan ?? 'starter'
-
-            const { data: plan, error: planError } = await supabase
-                .from('plans')
-                .select('id, name, price_yen')
-                .eq('key', targetPlanKey)
-                .single()
-
-            if (planError || !plan) {
-                throw new Error('プラン情報を取得できませんでした')
-            }
 
             await createOrUpdateSubscription({
                 userId: user.id,
-                planId: plan.id,
+                planKey: targetPlanKey, // ✅ ここが唯一の正解
             })
 
             await refreshSubscription()
@@ -58,8 +76,16 @@ export default function CheckoutClient() {
             setTimeout(() => {
                 router.replace('/dashboard')
             }, 1500)
-        } catch (e) {
+        } catch (e: any) {
             console.error(e)
+
+            if (e?.message === 'account_restricted') {
+                setError(
+                    'このアカウントは現在、リスク検知により一時的に制限モードになっています。解除後にプラン変更が可能になります。'
+                )
+                return
+            }
+
             setError(
                 'お支払いを完了できませんでした。通信状況をご確認のうえ、もう一度お試しください。'
             )
@@ -82,6 +108,26 @@ export default function CheckoutClient() {
                 lineHeight: 1.7,
             }}
         >
+            {isRestricted && (
+                <div
+                    style={{
+                        marginBottom: 20,
+                        padding: '14px 16px',
+                        borderRadius: 14,
+                        background: '#fff7ed',
+                        border: '1px solid #fed7aa',
+                        color: '#9a3412',
+                        fontWeight: 700,
+                        fontSize: 14,
+                        lineHeight: 1.6,
+                    }}
+                >
+                    🟠 このアカウントは現在 <strong>制限モード</strong> です
+                    <br />
+                    リスク検知により、一時的にプラン変更・契約操作が制限されています。
+                </div>
+            )}
+
             {isCompleted ? (
                 <div
                     style={{
@@ -115,13 +161,13 @@ export default function CheckoutClient() {
             ) : (
                 <>
                     <h1 style={{ margin: '0 0 12px', fontSize: 28 }}>
-                        {upgradePlan ? 'プラン変更の確認' : 'お支払い手続き'}
+                        {upgradePlan ? 'プラン変更の確認' : 'プラン選択・利用開始'}
                     </h1>
 
                     <p style={{ margin: '0 0 24px', color: '#374151' }}>
                         {upgradePlan
-                            ? '現在のプランから上位プランへ変更します。確定後、すぐにすべての機能が利用可能になります。'
-                            : '以下の内容でお支払いを行います。決済完了後、すぐに管理画面をご利用いただけます。'}
+                            ? '選択した上位プランの内容を確認し、変更を確定します。確定後、すぐに管理画面の機能が利用可能になります。'
+                            : '選択したプランの内容を確認し、支払いを確定します。確定後、すぐに管理画面の機能が利用可能になります。'}
                     </p>
 
                     <p style={{ margin: '0 0 16px', fontSize: 13, color: '#6b7280' }}>
@@ -141,14 +187,12 @@ export default function CheckoutClient() {
                             <div style={row}>
                                 <dt style={dt}>プラン</dt>
                                 <dd style={dd}>
-                                    {upgradePlan
-                                        ? `${upgradePlan.toUpperCase()}（アップグレード）`
-                                        : 'Starter（後からいつでも上位プランへ変更できます）'}
+                                    {selectedPlan.toUpperCase()}
                                 </dd>
                             </div>
                             <div style={row}>
                                 <dt style={dt}>月額料金</dt>
-                                <dd style={dd}>19,800円（税込）</dd>
+                                <dd style={dd}>{selectedPrice}</dd>
                             </div>
                             <div style={row}>
                                 <dt style={dt}>課金開始</dt>
@@ -201,7 +245,7 @@ export default function CheckoutClient() {
                     <button
                         onClick={handlePayment}
                         style={payButton}
-                        disabled={isSaving}
+                        disabled={isSaving || isRestricted}
                     >
                         {isSaving
                             ? '処理中…'
@@ -209,7 +253,7 @@ export default function CheckoutClient() {
                                 ? 'もう一度実行する'
                                 : upgradePlan
                                     ? '内容を確認してアップグレード'
-                                    : '内容を確認して支払う'}
+                                    : '内容を確認して利用を開始'}
                     </button>
 
                     <button

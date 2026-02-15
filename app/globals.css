@@ -128,3 +128,81 @@ footer a {
 footer a:hover {
   text-decoration: underline;
 }
+
+/* ===== Brand Title (DatLynq) ===== */
+/* トップのH1用：スマホは2段、PC以上で横並び */
+
+.brand-title {
+  line-height: 1.2;
+  margin: 6px 0 12px;
+  display: block;
+}
+
+.brand-en {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #111827;
+  display: inline-block;
+}
+
+.brand-ja {
+  display: block;       /* スマホ：必ず下段 */
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+/* PC以上は横並び（ブランドとして一体化） */
+@media (min-width: 768px) {
+  .brand-ja {
+    display: inline-block;
+    margin-left: 10px;
+    margin-top: 0;
+    font-size: 16px;
+    font-weight: 600;
+  }
+}
+
+/* ===== Footer Nav (Mobile) ===== */
+/* スマホは縦積み、それ以上は今のflex-wrapで横流し */
+
+.footer-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .footer-nav {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .footer-nav a {
+    padding: 4px 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .kpi-summary {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 640px) {
+  .risk-description {
+    font-size: 11.5px;
+    line-height: 1.5;
+    margin-bottom: 14px; /* ★ PCより少し広く */
+  }
+}
+
+@keyframes softPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}

@@ -13,6 +13,7 @@ import {
     type ActiveSubscriptionSnapshot,
 } from '@/lib/supabase/subscriptions'
 import type { FeatureKey, PlanKey } from '@/lib/features'
+import { FEATURES } from '@/lib/features'
 
 /* =========================
    型定義
@@ -23,26 +24,23 @@ export type User = {
     email?: string
 }
 
-type AuthContextType = {
+export type AuthContextType = {
     user: User | null
     isLoggedIn: boolean
 
-    // null = DB未同期 / true,false = 同期後
     hasActiveSubscription: boolean | null
     subscriptionPlan: PlanKey | null
-
-    // subscription 詳細（STEP6用）
     subscriptionStatus: ActiveSubscriptionSnapshot['status']
     currentPeriodEnd: string | null
     cancelAtPeriodEnd: boolean
+    nextPlanId: string | null
 
-    // feature ベース制御
-    featureKeys: FeatureKey[]
-    canUseFeature: (featureKey: FeatureKey) => boolean
+    userRequestedCancel: boolean
+    userRequestedPlanChange: boolean
 
-    // session確定中のみ true
     isLoading: boolean
 
+    canUseFeature: (featureKey: FeatureKey) => boolean
     refreshSubscription: () => Promise<void>
     logout: () => Promise<void>
 }
@@ -91,9 +89,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [cancelAtPeriodEnd, setCancelAtPeriodEnd] =
         useState<boolean>(false)
 
-    const [featureKeys, setFeatureKeys] = useState<FeatureKey[]>([])
+    const [nextPlanId, setNextPlanId] =
+        useState<string | null>(null)
+
+    const [userRequestedCancel, setUserRequestedCancel] =
+        useState<boolean>(false)
+
+    const [userRequestedPlanChange, setUserRequestedPlanChange] =
+        useState<boolean>(false)
 
     const [isLoading, setIsLoading] = useState(true)
+
+    const [billingError, setBillingError] = useState<string | null>(null)
 
     /* =========================
        subscription 同期
@@ -101,32 +108,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const syncSubscriptionFromDB = async (uid: string) => {
         try {
+
+            // =========================
+            // 🔓 制限解除チェック（auto_release_at）
+            // =========================
+            const { data: risk } = await supabase
+                .from('risk_controls')
+                .select('status, auto_release_at')
+                .eq('user_id', uid)
+                .maybeSingle()
+
+            if (
+                risk?.status === 'restricted' &&
+                risk.auto_release_at &&
+                new Date(risk.auto_release_at) <= new Date()
+            ) {
+                await supabase
+                    .from('risk_controls')
+                    .update({
+                        status: 'normal',
+                        updated_at: new Date().toISOString(),
+                    })
+                    .eq('user_id', uid)
+            }
+
             const snap = await withTimeout(
                 fetchActiveSubscriptionSnapshotByUserId(uid),
                 6000
             )
 
+            const isActive =
+                snap.status === 'active' ||
+                snap.status === 'past_due'
+
             setSubscriptionStatus(snap.status)
             setCurrentPeriodEnd(snap.currentPeriodEnd)
             setCancelAtPeriodEnd(snap.cancelAtPeriodEnd)
+            setSubscriptionPlan(snap.planKey)
+            setNextPlanId(snap.nextPlanId ?? null)
+            setHasActiveSubscription(isActive)
+            setUserRequestedCancel(snap.userRequestedCancel ?? false)
+            setUserRequestedPlanChange(snap.userRequestedPlanChange ?? false)
 
-            if (snap.isActive) {
-                setHasActiveSubscription(true)
-                setSubscriptionPlan(snap.planKey)
-                setFeatureKeys(snap.featureKeys)
-            } else {
-                setHasActiveSubscription(false)
-                setSubscriptionPlan(null)
-                setFeatureKeys([])
-            }
         } catch (e) {
             console.warn('syncSubscriptionFromDB failed:', e)
+
             setHasActiveSubscription(null)
-            setSubscriptionPlan(null)
-            setFeatureKeys([])
             setSubscriptionStatus(null)
             setCurrentPeriodEnd(null)
             setCancelAtPeriodEnd(false)
+            setNextPlanId(null)
+            setUserRequestedCancel(false)
+            setUserRequestedPlanChange(false)
         }
     }
 
@@ -150,10 +183,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setIsLoggedIn(false)
                 setHasActiveSubscription(null)
                 setSubscriptionPlan(null)
-                setFeatureKeys([])
                 setSubscriptionStatus(null)
                 setCurrentPeriodEnd(null)
                 setCancelAtPeriodEnd(false)
+                setNextPlanId(null)
                 setIsLoading(false)
                 return
             }
@@ -174,28 +207,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             try {
                 const { data } = await supabase.auth.getSession()
                 applySession(data.session)
-            } catch (e) {
-                console.error('AuthProvider:getSession error', e)
-                if (alive) {
-                    setUser(null)
-                    setIsLoggedIn(false)
-                    setHasActiveSubscription(null)
-                    setSubscriptionPlan(null)
-                    setFeatureKeys([])
-                    setSubscriptionStatus(null)
-                    setCurrentPeriodEnd(null)
-                    setCancelAtPeriodEnd(false)
-                    setIsLoading(false)
-                }
+            } catch {
+                setIsLoading(false)
             }
         }
 
         boot()
 
         const { data } = supabase.auth.onAuthStateChange(
-            (_event, session) => {
-                applySession(session)
-            }
+            (_event, session) => applySession(session)
         )
 
         return () => {
@@ -209,33 +229,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ========================= */
 
     const logout = async () => {
-        try {
-            await supabase.auth.signOut()
-        } finally {
-            setUser(null)
-            setIsLoggedIn(false)
-            setHasActiveSubscription(null)
-            setSubscriptionPlan(null)
-            setFeatureKeys([])
-            setSubscriptionStatus(null)
-            setCurrentPeriodEnd(null)
-            setCancelAtPeriodEnd(false)
-            setIsLoading(false)
-        }
+        await supabase.auth.signOut()
+        setUser(null)
+        setIsLoggedIn(false)
+        setHasActiveSubscription(null)
+        setSubscriptionPlan(null)
+        setSubscriptionStatus(null)
+        setCurrentPeriodEnd(null)
+        setCancelAtPeriodEnd(false)
+        setNextPlanId(null)
+        setUserRequestedCancel(false)
+        setUserRequestedPlanChange(false)
+        setIsLoading(false)
     }
 
     /* =========================
-       feature 判定
+       feature 判定（唯一の真実）
     ========================= */
 
-    const featureSet = useMemo(
-        () => new Set(featureKeys),
-        [featureKeys]
-    )
-
-    const canUseFeature = (featureKey: FeatureKey) => {
+    const canUseFeature = (featureKey: FeatureKey): boolean => {
+        if (!user) return false
         if (hasActiveSubscription !== true) return false
-        return featureSet.has(featureKey)
+
+        if (
+            subscriptionStatus === 'past_due' ||
+            subscriptionStatus === 'expired'
+        ) {
+            return false
+        }
+
+        if (!subscriptionPlan) return false
+
+        const feature = FEATURES[featureKey]
+        if (!feature) return false
+
+        return feature.availablePlans.includes(subscriptionPlan)
     }
 
     /* =========================
@@ -251,10 +279,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             subscriptionStatus,
             currentPeriodEnd,
             cancelAtPeriodEnd,
-            featureKeys,
-            canUseFeature,
+            nextPlanId,
             isLoading,
+            canUseFeature,
             refreshSubscription,
+            userRequestedCancel,
+            userRequestedPlanChange,
             logout,
         }),
         [
@@ -265,7 +295,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             subscriptionStatus,
             currentPeriodEnd,
             cancelAtPeriodEnd,
-            featureKeys,
+            nextPlanId,
+            userRequestedCancel,
+            userRequestedPlanChange,
             isLoading,
         ]
     )
