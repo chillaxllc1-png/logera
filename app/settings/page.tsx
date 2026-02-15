@@ -6,6 +6,8 @@ import AlertSettings from './tabs/AlertSettings'
 
 type SettingsTab = 'notifications' | 'security' | 'future'
 
+export const dynamic = 'force-dynamic'
+
 export default function SettingsPage() {
   const params = useSearchParams()
   const tab = (params.get('tab') as SettingsTab) ?? 'notifications'
