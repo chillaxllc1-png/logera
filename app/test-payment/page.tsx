@@ -9,16 +9,16 @@ export default function Page() {
         setLoading(true)
 
         try {
-            const res = await fetch('/api/payment', {
+            const res = await fetch('/api/payment/execute', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     userId: 'a4010e2c-da07-4087-8969-2476b661d188',
-                    amount: 1000,
+                    amount: 50,
+                    token: 'tok_visa', // ← テスト用トークン
                 }),
             })
 
-            // 🔥 ① まずHTTPステータス確認
             if (!res.ok) {
                 alert('現在決済は一時制限されています')
                 return
@@ -26,7 +26,6 @@ export default function Page() {
 
             const result = await res.json()
 
-            // 🔥 ② JSON安全チェック
             if (!result?.allowed) {
                 alert('現在決済は一時制限されています')
                 return
@@ -56,7 +55,7 @@ export default function Page() {
                     borderRadius: 8,
                 }}
             >
-                {loading ? '処理中...' : '1000円決済'}
+                {loading ? '処理中...' : '50円決済'}
             </button>
         </div>
     )
