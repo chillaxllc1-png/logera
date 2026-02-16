@@ -95,20 +95,14 @@ export async function POST(req: NextRequest) {
         // =========================
         // 💳 2. Pay.jp決済実行
         // =========================
-        const charge = await payjp.charges.create({
-            amount: Number(amount),
-            currency: 'jpy',
-            card: token,
-            description: 'DatLynq payment',
-            metadata: {
-                user_id: userId,
-            },
-        })
+        // =========================
+        // 🧪 2. テスト用ダミー決済
+        // =========================
 
         return new Response(
             JSON.stringify({
                 allowed: true,
-                chargeId: charge.id,
+                chargeId: 'test_charge_id',
             }),
             { status: 200 }
         )
