@@ -56,26 +56,40 @@ export async function POST(req: NextRequest) {
             .maybeSingle()
 
         if (data?.status === 'restricted') {
-            const now = new Date()
-            const release = new Date(data.auto_release_at)
 
-            // まだ制限中
-            if (release > now) {
+            // 🔴 永久ロック
+            if (data.level === 3) {
                 return new Response(
                     JSON.stringify({
                         allowed: false,
-                        reason: 'restricted',
-                        autoReleaseAt: data.auto_release_at,
+                        reason: 'restricted_level3'
                     }),
                     { status: 403 }
                 )
             }
 
-            // ⏳ 自動解除
-            await supabaseAdmin
-                .from('risk_controls')
-                .update({ status: 'normal' })
-                .eq('user_id', userId)
+            // ⏳ 自動解除タイプ
+            if (data.auto_release_at) {
+                const now = new Date()
+                const release = new Date(data.auto_release_at)
+
+                if (release > now) {
+                    return new Response(
+                        JSON.stringify({
+                            allowed: false,
+                            reason: 'restricted',
+                            autoReleaseAt: data.auto_release_at,
+                        }),
+                        { status: 403 }
+                    )
+                }
+
+                // 解除
+                await supabaseAdmin
+                    .from('risk_controls')
+                    .update({ status: 'normal' })
+                    .eq('user_id', userId)
+            }
         }
 
         // =========================
