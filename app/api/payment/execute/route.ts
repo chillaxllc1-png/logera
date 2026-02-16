@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
         return new Response(
             JSON.stringify({
                 allowed: true,
-                chargeId: 'test_charge_id',
+                chargeId: 'manual_test_ok',
             }),
             { status: 200 }
         )
