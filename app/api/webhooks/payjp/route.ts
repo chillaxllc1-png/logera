@@ -119,13 +119,11 @@ export async function POST(req: NextRequest) {
             )
         }
 
-        const userId: string | null = data?.metadata?.user_id ?? null
-        if (!userId) {
-            return new Response(
-                JSON.stringify({ ok: true, skipped: true }),
-                { status: 200 }
-            )
-        }
+        // =========================
+        // 🧪 テスト用：user_id 強制代入
+        // =========================
+        const userId: string =
+            data?.metadata?.user_id ?? 'a4010e2c-da07-4087-8969-2476b661d188'
 
         const occurredAt =
             typeof data.created === 'number'

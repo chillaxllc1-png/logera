@@ -86,6 +86,9 @@ export async function POST(req: NextRequest) {
             currency: 'jpy',
             card: token,
             description: 'DatLynq payment',
+            metadata: {
+                user_id: userId,
+            },
         })
 
         return new Response(

@@ -984,6 +984,17 @@ export default function Dashboard() {
         console.log('canUse enterprise_insights:', canUseFeature('enterprise_insights'))
     }, [subscriptionPlan])
 
+
+    // =========================
+    // ID特例用必ず消す
+    // =========================
+    useEffect(() => {
+        if (!user) return
+
+        console.log('🔥 CURRENT LOGGED IN USER ID:', user.id)
+        alert('CURRENT USER ID: ' + user.id)
+    }, [user])
+
     if (isLoading || hasActiveSubscription === null) {
         return <section style={{ padding: 40 }}>読み込み中…</section>
     }
