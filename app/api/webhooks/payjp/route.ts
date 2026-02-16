@@ -60,37 +60,33 @@ export async function POST(req: NextRequest) {
     try {
 
         // =========================
-        // 🔐 PAY.JP Webhook署名検証（HMAC）
+        // 🔐 PAY.JP Webhookトークン検証（公式方式）
         // =========================
 
-        // ① 生ボディ取得
-        const rawBody = await req.text()
+        // ① ヘッダーからトークン取得
+        const token = req.headers.get('x-payjp-webhook-token')
 
-        // ② 署名取得
-        const signature = req.headers.get('x-payjp-signature')
+        // ② 環境変数から正しいトークン取得
         const secret = process.env.PAYJP_WEBHOOK_SECRET
 
-        if (!signature || !secret) {
-            console.log('❌ Missing signature or secret')
+        // ③ 存在チェック
+        if (!token || !secret) {
+            console.log('❌ Missing webhook token or secret')
             return new Response('Unauthorized', { status: 401 })
         }
 
-        // ③ HMAC生成
-        const expectedSignature = crypto
-            .createHmac('sha256', secret)
-            .update(rawBody)
-            .digest('hex')
-
-        // ④ 検証
-        if (signature !== expectedSignature) {
-            console.log('❌ Invalid webhook signature')
-            return new Response('Invalid signature', { status: 401 })
+        // ④ 一致チェック
+        if (token !== secret) {
+            console.log('❌ Invalid webhook token')
+            return new Response('Unauthorized', { status: 401 })
         }
 
-        // ⑤ JSONパース（ここで初めて）
-        const body = JSON.parse(rawBody)
+        // =========================
+        // 📦 JSONパース
+        // =========================
+        const body = await req.json()
 
-        const eventId: string | undefined = body?.id   // ← ①追加
+        const eventId: string | undefined = body?.id
         const eventType: string | undefined = body?.type
         const data = body?.data?.object
 
