@@ -86,6 +86,8 @@ export async function POST(req: NextRequest) {
         // =========================
         const body = await req.json()
 
+        console.log('🔥 BODY:', body)
+
         const eventId: string | undefined = body?.id
         const eventType: string | undefined = body?.type
         const data = body?.data?.object
